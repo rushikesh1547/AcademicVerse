@@ -6,23 +6,38 @@
       "type": "object",
       "description": "Represents a user in the system, regardless of their role.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
-        },
         "authenticationUid": {
           "type": "string",
           "description": "Unique identifier provided by the authentication system."
         },
         "role": {
           "type": "string",
-          "description": "The user's role (e.g., student, teacher, admin)."
+          "enum": [
+            "student",
+            "teacher",
+            "admin"
+          ],
+          "description": "The user's role."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "profilePhotoUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's profile photo."
         }
       },
       "required": [
-        "id",
         "authenticationUid",
-        "role"
+        "role",
+        "email"
       ]
     },
     "Student": {

@@ -1,11 +1,3 @@
-export const studentData = {
-  name: "Sofia Davis",
-  id: "STU-12345",
-  email: "sofia.davis@university.edu",
-  major: "Computer Science",
-  year: 3,
-  cgpa: 3.8,
-};
 
 export const attendanceSummary = [
   { subject: "Data Structures", total: 30, attended: 28 },

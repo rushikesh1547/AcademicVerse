@@ -5,13 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Camera, CheckCircle, Loader2, XCircle } from 'lucide-react';
+import { Camera, CheckCircle, Info, Loader2, XCircle } from 'lucide-react';
 import { verifyStudentFace, FaceVerificationOutput } from '@/ai/ai-face-verification';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, serverTimestamp } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp, doc } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 export default function MarkAttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -21,6 +20,12 @@ export default function MarkAttendancePage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
+
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -53,14 +58,23 @@ export default function MarkAttendancePage() {
   }, [toast]);
 
   const handleMarkAttendance = async () => {
-    if (!videoRef.current || !user) {
+    if (!videoRef.current || !user || !userData) {
         toast({
             variant: "destructive",
             title: "Error",
-            description: "Camera not ready or user not logged in.",
+            description: "Camera not ready or user data not loaded.",
         });
         return;
     }
+    if (!userData.profilePhotoUrl) {
+        toast({
+            variant: "destructive",
+            title: "Profile Photo Missing",
+            description: "Please set your profile photo on the profile page before marking attendance.",
+        });
+        return;
+    }
+
     setIsVerifying(true);
     setVerificationResult(null);
 
@@ -70,18 +84,11 @@ export default function MarkAttendancePage() {
     const context = canvas.getContext('2d');
     context?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     const capturedPhotoDataUri = canvas.toDataURL('image/jpeg');
-
-    const referenceUserAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-1');
-    if (!referenceUserAvatar) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Reference profile image not found.' });
-        setIsVerifying(false);
-        return;
-    }
-
+    
     try {
         const result = await verifyStudentFace({
             capturedPhotoDataUri,
-            referencePhotoUrl: referenceUserAvatar.imageUrl,
+            referencePhotoUrl: userData.profilePhotoUrl,
         });
         setVerificationResult(result);
 
@@ -119,14 +126,17 @@ export default function MarkAttendancePage() {
   };
 
   const getButtonState = () => {
-    if (isUserLoading) {
-      return { disabled: true, text: 'Authenticating...' };
+    if (isUserLoading || isUserDataLoading) {
+      return { disabled: true, text: 'Loading User Data...' };
     }
     if (isVerifying) {
       return { disabled: true, text: 'Verifying...' };
     }
     if (!hasCameraPermission) {
       return { disabled: true, text: 'Camera Disabled' };
+    }
+    if (!userData?.profilePhotoUrl) {
+      return { disabled: true, text: 'Set Profile Photo First' };
     }
     return { disabled: false, text: 'Mark My Attendance' };
   };
@@ -162,7 +172,20 @@ export default function MarkAttendancePage() {
             </AlertDescription>
           </Alert>
         )}
+        {!isUserDataLoading && !userData?.profilePhotoUrl && (
+            <Alert className="w-full max-w-md">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Action Required</AlertTitle>
+                <AlertDescription>
+                    You need to set a profile photo before you can mark your attendance.
+                    <Button asChild variant="link" className="p-1 h-auto">
+                        <Link href="/dashboard/profile">Go to Profile Page</Link>
+                    </Button>
+                </AlertDescription>
+            </Alert>
+        )}
         <Button onClick={handleMarkAttendance} disabled={buttonState.disabled}>
+          {isVerifying || isUserLoading || isUserDataLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {buttonState.text}
         </Button>
       </CardContent>

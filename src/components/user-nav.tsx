@@ -10,27 +10,48 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Link from 'next/link';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { Skeleton } from './ui/skeleton';
 
 export function UserNav() {
-    const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-1');
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
+  const isLoading = isUserLoading || isUserDataLoading;
+
+  if (isLoading) {
+    return <Skeleton className="h-9 w-9 rounded-full" />;
+  }
+
+  const userDisplayName = userData?.displayName || 'Student';
+  const userEmail = userData?.email || '';
+  const userAvatarUrl = userData?.profilePhotoUrl;
+  const fallback = userDisplayName?.charAt(0).toUpperCase() || 'S';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt="User Avatar" />}
-            <AvatarFallback>SD</AvatarFallback>
+            {userAvatarUrl && <AvatarImage src={userAvatarUrl} alt={userDisplayName} />}
+            <AvatarFallback>{fallback}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Sofia Davis</p>
+            <p className="text-sm font-medium leading-none">{userDisplayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              student@example.com
+              {userEmail}
             </p>
           </div>
         </DropdownMenuLabel>
