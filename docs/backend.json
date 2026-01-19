@@ -1,0 +1,799 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the system, regardless of their role.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "authenticationUid": {
+          "type": "string",
+          "description": "Unique identifier provided by the authentication system."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role (e.g., student, teacher, admin)."
+        }
+      },
+      "required": [
+        "id",
+        "authenticationUid",
+        "role"
+      ]
+    },
+    "Student": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Student",
+      "type": "object",
+      "description": "Represents a student in the system, extending the User entity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Student entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Student)"
+        },
+        "personalInformation": {
+          "type": "string",
+          "description": "Stores personal info."
+        }
+      },
+      "required": [
+        "id",
+        "userId"
+      ]
+    },
+    "Teacher": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Teacher",
+      "type": "object",
+      "description": "Represents a teacher in the system, extending the User entity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Teacher entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Teacher)"
+        }
+      },
+      "required": [
+        "id",
+        "userId"
+      ]
+    },
+    "AttendanceSession": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AttendanceSession",
+      "type": "object",
+      "description": "Represents a single attendance session (e.g., a lecture).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AttendanceSession entity."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The start time of the attendance session.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The end time of the attendance session.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "startTime"
+      ]
+    },
+    "AttendanceInterval": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AttendanceInterval",
+      "type": "object",
+      "description": "Represents a single 15-minute interval within an attendance session.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AttendanceInterval entity."
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Reference to AttendanceSession. (Relationship: AttendanceSession 1:N AttendanceInterval)"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N AttendanceInterval)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The timestamp of the attendance interval.",
+          "format": "date-time"
+        },
+        "presenceStatus": {
+          "type": "boolean",
+          "description": "The presence status of the student during this interval."
+        },
+        "faceRecognitionData": {
+          "type": "string",
+          "description": "Stores facial recognition capture data used to verify identity."
+        }
+      },
+      "required": [
+        "id",
+        "sessionId",
+        "studentId",
+        "timestamp",
+        "presenceStatus"
+      ]
+    },
+    "AttendanceSummary": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AttendanceSummary",
+      "type": "object",
+      "description": "Represents a summary of a student's attendance for a specific session.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AttendanceSummary entity."
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Reference to AttendanceSession. (Relationship: AttendanceSession 1:N AttendanceSummary)"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N AttendanceSummary)"
+        },
+        "attendancePercentage": {
+          "type": "number",
+          "description": "The student's attendance percentage for the session."
+        }
+      },
+      "required": [
+        "id",
+        "sessionId",
+        "studentId",
+        "attendancePercentage"
+      ]
+    },
+    "Quiz": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quiz",
+      "type": "object",
+      "description": "Represents a quiz.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Quiz entity."
+        },
+        "configuration": {
+          "type": "string",
+          "description": "The quiz configuration details."
+        }
+      },
+      "required": [
+        "id",
+        "configuration"
+      ]
+    },
+    "QuizQuestion": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QuizQuestion",
+      "type": "object",
+      "description": "Represents a question within a quiz.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the QuizQuestion entity."
+        },
+        "quizId": {
+          "type": "string",
+          "description": "Reference to Quiz. (Relationship: Quiz 1:N QuizQuestion)"
+        },
+        "questionText": {
+          "type": "string",
+          "description": "The text of the quiz question."
+        }
+      },
+      "required": [
+        "id",
+        "quizId",
+        "questionText"
+      ]
+    },
+    "QuizAttempt": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "QuizAttempt",
+      "type": "object",
+      "description": "Represents a student's attempt at a quiz.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the QuizAttempt entity."
+        },
+        "quizId": {
+          "type": "string",
+          "description": "Reference to Quiz. (Relationship: Quiz 1:N QuizAttempt)"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N QuizAttempt)"
+        },
+        "studentAnswers": {
+          "type": "string",
+          "description": "The student's answers to the quiz questions."
+        },
+        "tabSwitchCount": {
+          "type": "number",
+          "description": "The number of times the student switched tabs during the quiz."
+        },
+        "autoSubmissionFlag": {
+          "type": "boolean",
+          "description": "Flag indicating whether the quiz was auto-submitted."
+        }
+      },
+      "required": [
+        "id",
+        "quizId",
+        "studentId"
+      ]
+    },
+    "Assignment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Assignment",
+      "type": "object",
+      "description": "Represents an assignment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Assignment entity."
+        },
+        "questionText": {
+          "type": "string",
+          "description": "The text or description of the assignment."
+        },
+        "questionImageReferences": {
+          "type": "array",
+          "description": "References (e.g., URLs) to question images.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "questionText"
+      ]
+    },
+    "AssignmentSubmission": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AssignmentSubmission",
+      "type": "object",
+      "description": "Represents a student's submission for an assignment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AssignmentSubmission entity."
+        },
+        "assignmentId": {
+          "type": "string",
+          "description": "Reference to Assignment. (Relationship: Assignment 1:N AssignmentSubmission)"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N AssignmentSubmission)"
+        },
+        "submissionImageUrl": {
+          "type": "string",
+          "description": "The URL of the submitted image."
+        },
+        "submissionTimestamp": {
+          "type": "string",
+          "description": "The timestamp of the submission.",
+          "format": "date-time"
+        },
+        "evaluationStatus": {
+          "type": "string",
+          "description": "The evaluation status of the submission."
+        }
+      },
+      "required": [
+        "id",
+        "assignmentId",
+        "studentId",
+        "submissionImageUrl",
+        "submissionTimestamp"
+      ]
+    },
+    "Resource": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Resource",
+      "type": "object",
+      "description": "Represents an academic resource shared by a teacher.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Resource entity."
+        },
+        "uploaderId": {
+          "type": "string",
+          "description": "Reference to Teacher. (Relationship: Teacher 1:N Resource)"
+        },
+        "subjectMapping": {
+          "type": "string",
+          "description": "The subject to which the resource is mapped."
+        },
+        "fileReference": {
+          "type": "string",
+          "description": "A reference to the file (e.g., URL in Firebase Storage)."
+        }
+      },
+      "required": [
+        "id",
+        "uploaderId",
+        "subjectMapping",
+        "fileReference"
+      ]
+    },
+    "ExamForm": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ExamForm",
+      "type": "object",
+      "description": "Represents an exam registration form.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ExamForm entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N ExamForm)"
+        },
+        "examType": {
+          "type": "string",
+          "description": "The type of exam (e.g., regular, backlog)."
+        },
+        "subjectsSelected": {
+          "type": "array",
+          "description": "The subjects selected for the exam.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "approvalStatus": {
+          "type": "string",
+          "description": "The approval status of the exam form."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "examType",
+        "subjectsSelected",
+        "approvalStatus"
+      ]
+    },
+    "Result": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Result",
+      "type": "object",
+      "description": "Represents a student's result for a specific exam.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Result entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N Result)"
+        },
+        "semester": {
+          "type": "number",
+          "description": "The semester for which the result is recorded."
+        },
+        "examType": {
+          "type": "string",
+          "description": "The type of exam (e.g., regular, backlog)."
+        },
+        "subjectGrades": {
+          "type": "string",
+          "description": "Subject-wise grades."
+        },
+        "sgpa": {
+          "type": "number",
+          "description": "The SGPA for the semester."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "semester",
+        "examType",
+        "subjectGrades",
+        "sgpa"
+      ]
+    },
+    "GradeCard": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GradeCard",
+      "type": "object",
+      "description": "Represents a consolidated grade card for a student.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the GradeCard entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N GradeCard)"
+        },
+        "semesterSgpa": {
+          "type": "string",
+          "description": "Semester-wise SGPA."
+        },
+        "cgpa": {
+          "type": "number",
+          "description": "The CGPA."
+        },
+        "downloadableDocumentUrl": {
+          "type": "string",
+          "description": "URL for downloading the grade card document."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "semesterSgpa",
+        "cgpa",
+        "downloadableDocumentUrl"
+      ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification sent to a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Notification entity."
+        },
+        "recipientId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Notification)"
+        },
+        "notificationType": {
+          "type": "string",
+          "description": "The type of notification."
+        },
+        "deliveryChannels": {
+          "type": "array",
+          "description": "The delivery channels (e.g., email, SMS).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The timestamp of the notification.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "recipientId",
+        "notificationType",
+        "deliveryChannels",
+        "timestamp"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user information. Used for authentication and authorization. Includes the user's 'role' for authorization.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "students/{studentId}",
+        "definition": {
+          "entityName": "Student",
+          "schema": {
+            "$ref": "#/backend/entities/Student"
+          },
+          "description": "Stores student-specific data, linked to the user's 'id'.",
+          "params": [
+            {
+              "name": "studentId",
+              "description": "The unique identifier of the student."
+            }
+          ]
+        }
+      },
+      {
+        "path": "teachers/{teacherId}",
+        "definition": {
+          "entityName": "Teacher",
+          "schema": {
+            "$ref": "#/backend/entities/Teacher"
+          },
+          "description": "Stores teacher-specific data, linked to the user's 'id'.",
+          "params": [
+            {
+              "name": "teacherId",
+              "description": "The unique identifier of the teacher."
+            }
+          ]
+        }
+      },
+      {
+        "path": "attendanceSessions/{sessionId}",
+        "definition": {
+          "entityName": "AttendanceSession",
+          "schema": {
+            "$ref": "#/backend/entities/AttendanceSession"
+          },
+          "description": "Stores attendance session information.",
+          "params": [
+            {
+              "name": "sessionId",
+              "description": "The unique identifier of the attendance session."
+            }
+          ]
+        }
+      },
+      {
+        "path": "attendanceSessions/{sessionId}/attendanceIntervals/{intervalId}",
+        "definition": {
+          "entityName": "AttendanceInterval",
+          "schema": {
+            "$ref": "#/backend/entities/AttendanceInterval"
+          },
+          "description": "Stores attendance intervals for each session.  Denormalized teacher id from `attendanceSessions` to determine write permissions. Denormalized student ID from `students` collection to determine read access.",
+          "params": [
+            {
+              "name": "sessionId",
+              "description": "The unique identifier of the attendance session."
+            },
+            {
+              "name": "intervalId",
+              "description": "The unique identifier of the attendance interval."
+            }
+          ]
+        }
+      },
+      {
+        "path": "attendanceSessions/{sessionId}/attendanceSummary/{summaryId}",
+        "definition": {
+          "entityName": "AttendanceSummary",
+          "schema": {
+            "$ref": "#/backend/entities/AttendanceSummary"
+          },
+          "description": "Stores attendance summaries for each session. Denormalized teacher id from `attendanceSessions` to determine write permissions. Denormalized student ID from `students` collection to determine read access.",
+          "params": [
+            {
+              "name": "sessionId",
+              "description": "The unique identifier of the attendance session."
+            },
+            {
+              "name": "summaryId",
+              "description": "The unique identifier of the attendance summary."
+            }
+          ]
+        }
+      },
+      {
+        "path": "quizzes/{quizId}",
+        "definition": {
+          "entityName": "Quiz",
+          "schema": {
+            "$ref": "#/backend/entities/Quiz"
+          },
+          "description": "Stores quiz information.",
+          "params": [
+            {
+              "name": "quizId",
+              "description": "The unique identifier of the quiz."
+            }
+          ]
+        }
+      },
+      {
+        "path": "quizzes/{quizId}/quizQuestions/{questionId}",
+        "definition": {
+          "entityName": "QuizQuestion",
+          "schema": {
+            "$ref": "#/backend/entities/QuizQuestion"
+          },
+          "description": "Stores questions for each quiz.  Denormalized teacher id from `quizzes` to determine write permissions.",
+          "params": [
+            {
+              "name": "quizId",
+              "description": "The unique identifier of the quiz."
+            },
+            {
+              "name": "questionId",
+              "description": "The unique identifier of the quiz question."
+            }
+          ]
+        }
+      },
+      {
+        "path": "quizzes/{quizId}/quizAttempts/{attemptId}",
+        "definition": {
+          "entityName": "QuizAttempt",
+          "schema": {
+            "$ref": "#/backend/entities/QuizAttempt"
+          },
+          "description": "Stores student attempts for each quiz.  Denormalized student ID from `students` collection to determine write permissions. Denormalized quiz teacher ID from `quizzes` to limit listing.",
+          "params": [
+            {
+              "name": "quizId",
+              "description": "The unique identifier of the quiz."
+            },
+            {
+              "name": "attemptId",
+              "description": "The unique identifier of the quiz attempt."
+            }
+          ]
+        }
+      },
+      {
+        "path": "assignments/{assignmentId}",
+        "definition": {
+          "entityName": "Assignment",
+          "schema": {
+            "$ref": "#/backend/entities/Assignment"
+          },
+          "description": "Stores assignment information.",
+          "params": [
+            {
+              "name": "assignmentId",
+              "description": "The unique identifier of the assignment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "assignments/{assignmentId}/assignmentSubmissions/{submissionId}",
+        "definition": {
+          "entityName": "AssignmentSubmission",
+          "schema": {
+            "$ref": "#/backend/entities/AssignmentSubmission"
+          },
+          "description": "Stores student submissions for each assignment. Denormalized student ID from `students` collection to determine write permissions. Denormalized assignment teacher id from `assignments` collection to limit listing.",
+          "params": [
+            {
+              "name": "assignmentId",
+              "description": "The unique identifier of the assignment."
+            },
+            {
+              "name": "submissionId",
+              "description": "The unique identifier of the assignment submission."
+            }
+          ]
+        }
+      },
+      {
+        "path": "resources/{resourceId}",
+        "definition": {
+          "entityName": "Resource",
+          "schema": {
+            "$ref": "#/backend/entities/Resource"
+          },
+          "description": "Stores resources uploaded by teachers.",
+          "params": [
+            {
+              "name": "resourceId",
+              "description": "The unique identifier of the resource."
+            }
+          ]
+        }
+      },
+      {
+        "path": "examForms/{formId}",
+        "definition": {
+          "entityName": "ExamForm",
+          "schema": {
+            "$ref": "#/backend/entities/ExamForm"
+          },
+          "description": "Stores exam form information.",
+          "params": [
+            {
+              "name": "formId",
+              "description": "The unique identifier of the exam form."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/results/{resultId}",
+        "definition": {
+          "entityName": "Result",
+          "schema": {
+            "$ref": "#/backend/entities/Result"
+          },
+          "description": "Stores student results. Path based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "resultId",
+              "description": "The unique identifier of the result."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/gradeCards/{gradeCardId}",
+        "definition": {
+          "entityName": "GradeCard",
+          "schema": {
+            "$ref": "#/backend/entities/GradeCard"
+          },
+          "description": "Stores grade cards. Path based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "gradeCardId",
+              "description": "The unique identifier of the grade card."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Stores notifications for each user. Path based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "notificationId",
+              "description": "The unique identifier of the notification."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the Academic Management Platform with Continuous AI-Based Attendance, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). Authorization independence is achieved through denormalization. For instance, access to `attendanceIntervals` is determined by denormalized data about the `AttendanceSession` and `Student`.  Specifically, any authorization-relevant data about the `AttendanceSession` (e.g., associated teacher) would be copied into the `attendanceIntervals` documents. This avoids the need for `get()` calls in security rules. To support QAPs, data segregation is employed. Public resources are stored separately from private student data. Membership maps aren't explicitly used here because the ownership model is primarily path-based (e.g., `/users/{userId}/results/{resultId}`), and roles are stored directly in the `users` collection."
+  }
+}
