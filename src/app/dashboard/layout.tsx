@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/sheet';
 import { DashboardNav } from '@/components/dashboard-nav';
 import { UserNav } from '@/components/user-nav';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export default function DashboardLayout({
   children,
@@ -108,6 +109,7 @@ export default function DashboardLayout({
           <UserNav />
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
+          <FirebaseErrorListener />
           {children}
         </main>
       </div>
