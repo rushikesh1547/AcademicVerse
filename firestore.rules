@@ -99,7 +99,7 @@ service cloud.firestore {
      * @principle Enforces self-creation and ownership, and prevents user enumeration.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      allow get: if isSignedIn();
       allow list: if false;
       allow create: if isOwner(userId) && request.resource.data.authenticationUid == userId;
       allow update: if isExistingOwner(userId);
