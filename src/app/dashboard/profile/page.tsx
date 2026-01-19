@@ -273,7 +273,7 @@ export default function ProfilePage() {
         <Card>
           <CardHeader>
             <CardTitle>Recent Assignment Status</CardTitle>
-          </Header>
+          </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
