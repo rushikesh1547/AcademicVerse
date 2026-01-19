@@ -85,6 +85,8 @@ export default function MarkAttendancePage() {
     context?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     const capturedPhotoDataUri = canvas.toDataURL('image/jpeg');
     
+    const VERIFICATION_THRESHOLD = 0.8; // 80% confidence required
+
     try {
         const result = await verifyStudentFace({
             capturedPhotoDataUri,
@@ -92,7 +94,7 @@ export default function MarkAttendancePage() {
         });
         setVerificationResult(result);
 
-        if (result.isVerified) {
+        if (result.isVerified && result.confidence >= VERIFICATION_THRESHOLD) {
             toast({
                 title: 'Verification Successful!',
                 description: `Confidence: ${(result.confidence * 100).toFixed(2)}%. Attendance marked.`,
@@ -107,10 +109,14 @@ export default function MarkAttendancePage() {
                 faceRecognitionData: `Verified with ${(result.confidence * 100).toFixed(2)}% confidence`,
             });
         } else {
+            let description = result.reason || 'Could not verify your identity.';
+            if (result.isVerified && result.confidence < VERIFICATION_THRESHOLD) {
+                description = `Confidence score of ${(result.confidence * 100).toFixed(2)}% is too low. Please try again in better lighting.`;
+            }
             toast({
                 variant: 'destructive',
                 title: 'Verification Failed',
-                description: result.reason || 'Could not verify your identity.',
+                description: description,
             });
         }
     } catch (error) {
@@ -131,6 +137,9 @@ export default function MarkAttendancePage() {
     }
     if (isVerifying) {
       return { disabled: true, text: 'Verifying...' };
+    }
+    if (hasCameraPermission === null) {
+      return { disabled: true, text: 'Requesting Camera...' };
     }
     if (!hasCameraPermission) {
       return { disabled: true, text: 'Camera Disabled' };
@@ -202,9 +211,9 @@ export default function MarkAttendancePage() {
                 <div className="space-y-4">
                     <div>
                         <h3 className="font-semibold">Status:</h3>
-                        <Badge variant={verificationResult.isVerified ? "default" : "destructive"} className="gap-1.5 pl-1.5">
-                            {verificationResult.isVerified ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                            {verificationResult.isVerified ? "Verified" : "Not Verified"}
+                        <Badge variant={verificationResult.isVerified && verificationResult.confidence >= 0.8 ? "default" : "destructive"} className="gap-1.5 pl-1.5">
+                            {verificationResult.isVerified && verificationResult.confidence >= 0.8 ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                            {verificationResult.isVerified && verificationResult.confidence >= 0.8 ? "Verified" : "Not Verified"}
                         </Badge>
                     </div>
                      <div>

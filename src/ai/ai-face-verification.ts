@@ -50,18 +50,20 @@ const prompt = ai.definePrompt({
   name: 'faceVerificationPrompt',
   input: {schema: FaceVerificationInputSchema},
   output: {schema: FaceVerificationOutputSchema},
-  prompt: `You are an expert AI face verification system. Your task is to determine if two images are of the same person.
+  prompt: `You are an expert AI face verification system. Your task is to determine if two images are of the same person with a very high degree of certainty.
 
 Analyze the two images provided: a live captured photo and a reference photo.
 
 - Captured Photo: {{media url=capturedPhotoDataUri}}
 - Reference Photo: {{media url=referencePhotoUrl}}
 
-Carefully compare facial features, structure, and any unique identifiers. Based on your analysis, determine if the person in the captured photo is the same as the person in the reference photo.
+**Your analysis must be strict.** Only determine the faces are a match if you are very confident. Carefully compare facial features, structure, and any unique identifiers like moles or scars. Pay close attention to the shape of the eyes, nose, and jawline.
 
-Set 'isVerified' to true if they are the same person, and false otherwise.
-Provide a 'confidence' score from 0.0 to 1.0 representing your certainty.
-Provide a brief 'reason' for your decision, highlighting the key factors you considered.
+Based on your strict analysis, determine if the person in the captured photo is the same as the person in the reference photo.
+
+Set 'isVerified' to true ONLY if you are highly certain they are the same person. Otherwise, set it to false.
+Provide a 'confidence' score from 0.0 to 1.0 representing your certainty. A score of 1.0 means a perfect, undeniable match. A score below 0.8 should be treated with suspicion.
+Provide a brief 'reason' for your decision, highlighting the key factors you considered in your strict comparison.
 
 Output the response in JSON format.
 `,
