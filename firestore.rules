@@ -1,3 +1,4 @@
+
 /**
  * This ruleset enforces a security model based on user roles (student, teacher) and strict data ownership.
  * It's designed for rapid prototyping, focusing on authorization (who can access what) rather than
@@ -284,15 +285,15 @@ service cloud.firestore {
     // --------------------------------
 
     /**
-     * @description Students can create and manage their own exam forms.
+     * @description Students can create and manage their own exam forms. Teachers can list them for approval.
      * @path /examForms/{formId}
      * @allow (create) A student creating their own exam form.
      * @deny (get) Another student trying to read someone else's exam form.
-     * @principle Enforces strict document ownership for sensitive student data.
+     * @principle Enforces strict document ownership for students, while allowing teachers to review.
      */
     match /examForms/{formId} {
       allow get: if isExistingDoc() && resource.data.studentId == request.auth.uid;
-      allow list: if false;
+      allow list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
       allow update: if isExistingDoc() && resource.data.studentId == request.auth.uid;
       allow delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;

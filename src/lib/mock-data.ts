@@ -1,4 +1,60 @@
 
+export const subjects = [
+  { id: "ds", name: "Data Structures" },
+  { id: "algo", name: "Algorithms" },
+  { id: "db", name: "Database Systems" },
+  { id: "os", name: "Operating Systems" },
+  { id: "web", name: "Web Development" },
+];
+
+export const resources = [
+  {
+    id: "res-1",
+    subject: "Data Structures",
+    title: "Lecture 1: Intro to Linked Lists",
+    fileUrl: "#",
+    uploader: "Dr. Alan Turing",
+  },
+  {
+    id: "res-2",
+    subject: "Algorithms",
+    title: "Asymptotic Notations Cheat Sheet",
+    fileUrl: "#",
+    uploader: "Dr. Ada Lovelace",
+  },
+  {
+    id: "res-3",
+    subject: "Database Systems",
+    title: "SQL Joins Explained",
+    fileUrl: "#",
+    uploader: "Dr. Edgar Codd",
+  },
+];
+
+export const results = [
+    {
+        id: "result-1",
+        semester: 3,
+        examType: "Regular",
+        sgpa: 8.5,
+        subjectGrades: "Data Structures: A, Algorithms: B+, Database Systems: A",
+    },
+    {
+        id: "result-2",
+        semester: 2,
+        examType: "Regular",
+        sgpa: 8.2,
+        subjectGrades: "Programming 101: A, Discrete Maths: A, Computer Org: B",
+    },
+    {
+        id: "result-3",
+        semester: 1,
+        examType: "Regular",
+        sgpa: 7.9,
+        subjectGrades: "Intro to C: B, Physics: B+, Chemistry: A",
+    }
+];
+
 export const attendanceSummary = [
   { subject: "Data Structures", total: 30, attended: 28 },
   { subject: "Algorithms", total: 30, attended: 25 },
