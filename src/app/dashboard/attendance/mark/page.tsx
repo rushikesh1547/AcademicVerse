@@ -20,7 +20,7 @@ export default function MarkAttendancePage() {
   const [verificationResult, setVerificationResult] = useState<FaceVerificationOutput | null>(null);
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -118,6 +118,21 @@ export default function MarkAttendancePage() {
     }
   };
 
+  const getButtonState = () => {
+    if (isUserLoading) {
+      return { disabled: true, text: 'Authenticating...' };
+    }
+    if (isVerifying) {
+      return { disabled: true, text: 'Verifying...' };
+    }
+    if (!hasCameraPermission) {
+      return { disabled: true, text: 'Camera Disabled' };
+    }
+    return { disabled: false, text: 'Mark My Attendance' };
+  };
+
+  const buttonState = getButtonState();
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
     <Card>
@@ -147,8 +162,8 @@ export default function MarkAttendancePage() {
             </AlertDescription>
           </Alert>
         )}
-        <Button onClick={handleMarkAttendance} disabled={!hasCameraPermission || isVerifying}>
-          {isVerifying ? 'Verifying...' : 'Mark My Attendance'}
+        <Button onClick={handleMarkAttendance} disabled={buttonState.disabled}>
+          {buttonState.text}
         </Button>
       </CardContent>
     </Card>
