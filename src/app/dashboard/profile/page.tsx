@@ -19,14 +19,15 @@ import {
   DialogFooter,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { attendanceSummary, assignments } from '@/lib/mock-data';
-import { Download, User, Camera, Loader2 } from 'lucide-react';
+import { Download, User, Camera, Loader2, Pencil } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -42,11 +43,18 @@ export default function ProfilePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [openPhotoDialog, setOpenPhotoDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [displayName, setDisplayName] = useState('');
 
   useEffect(() => {
-    // This effect handles the camera lifecycle based on the dialog's `open` state.
-    if (open) {
+    if (userData?.displayName) {
+      setDisplayName(userData.displayName);
+    }
+  }, [userData?.displayName]);
+
+  useEffect(() => {
+    if (openPhotoDialog) {
       let stream: MediaStream | null = null;
       const setupCamera = async () => {
         try {
@@ -64,14 +72,12 @@ export default function ProfilePage() {
             title: 'Camera Error',
             description: 'Could not access camera. Please check permissions.',
           });
-          setOpen(false);
+          setOpenPhotoDialog(false);
         }
       };
 
       setupCamera();
 
-      // Cleanup function: This will be called when the dialog closes
-      // or when the component unmounts.
       return () => {
         if (stream) {
           stream.getTracks().forEach((track) => track.stop());
@@ -82,34 +88,48 @@ export default function ProfilePage() {
         setIsCameraReady(false);
       };
     }
-  }, [open, toast, setOpen]);
-
+  }, [openPhotoDialog, toast]);
 
   const handleCaptureAndSave = async () => {
-    if (!videoRef.current || !userDocRef) return;
+    if (!videoRef.current || !userDocRef || !videoRef.current.srcObject) {
+        toast({ title: "Error", description: "Camera is not active or user not found.", variant: "destructive" });
+        return;
+    };
     setIsSaving(true);
     
-    // In a real app, you would upload this to Firebase Storage and get a URL.
-    // For this prototype, we'll just save a new placeholder image URL to simulate the update.
-    const newProfileImage = PlaceHolderImages.find((p) => p.id === 'user-avatar-1');
-    if (!newProfileImage) {
-        toast({ title: "Error", description: "Placeholder image not found", variant: "destructive" });
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+        toast({ title: "Error", description: "Could not get canvas context.", variant: "destructive" });
         setIsSaving(false);
         return;
     }
-    
-    updateDocumentNonBlocking(userDocRef, { profilePhotoUrl: newProfileImage.imageUrl });
 
-    // Simulate save time
-    setTimeout(() => {
-        toast({
-            title: 'Profile Photo Updated!',
-            description: 'Your new photo has been saved.',
-        });
-        setIsSaving(false);
-        setOpen(false);
-    }, 1000);
+    context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    const imageDataUrl = canvas.toDataURL('image/jpeg');
+
+    updateDocumentNonBlocking(userDocRef, { profilePhotoUrl: imageDataUrl });
+
+    toast({
+        title: 'Profile Photo Updated!',
+        description: 'Your new photo has been saved.',
+    });
+    setIsSaving(false);
+    setOpenPhotoDialog(false);
   };
+
+  const handleProfileUpdate = () => {
+    if (!userDocRef || !displayName) return;
+    updateDocumentNonBlocking(userDocRef, { displayName });
+    toast({
+        title: "Profile Updated",
+        description: "Your display name has been changed."
+    });
+    setOpenEditDialog(false);
+  }
   
   const isLoading = isUserLoading || isUserDataLoading;
 
@@ -148,36 +168,71 @@ export default function ProfilePage() {
                 <h2 className="text-2xl font-bold font-headline">{userData?.displayName}</h2>
                 <p className="text-muted-foreground">Role: {userData?.role}</p>
                 <p className="text-muted-foreground">Email: {userData?.email}</p>
-                <Dialog open={open} onOpenChange={setOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Camera className="mr-2 h-4 w-4" />
-                      Update Profile Photo
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Update Profile Photo</DialogTitle>
-                      <DialogDescription>
-                        Center your face in the camera view and capture a new photo.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
-                        <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                        {!isCameraReady && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <div className="flex gap-2 mt-2">
+                    <Dialog open={openPhotoDialog} onOpenChange={setOpenPhotoDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Camera className="mr-2 h-4 w-4" />
+                          Update Profile Photo
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Update Profile Photo</DialogTitle>
+                          <DialogDescription>
+                            Center your face in the camera view and capture a new photo.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
+                            <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                            {!isCameraReady && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
+                            )}
+                        </div>
+                        <DialogFooter>
+                          <Button variant="secondary" onClick={() => setOpenPhotoDialog(false)}>Cancel</Button>
+                          <Button onClick={handleCaptureAndSave} disabled={!isCameraReady || isSaving}>
+                            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : 'Capture & Save'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit Profile
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Edit Profile</DialogTitle>
+                                <DialogDescription>
+                                    Update your display name.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="name" className="text-right">
+                                        Name
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        value={displayName}
+                                        onChange={(e) => setDisplayName(e.target.value)}
+                                        className="col-span-3"
+                                    />
+                                </div>
                             </div>
-                        )}
-                    </div>
-                    <DialogFooter>
-                      <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-                      <Button onClick={handleCaptureAndSave} disabled={!isCameraReady || isSaving}>
-                        {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : 'Capture & Save'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                            <DialogFooter>
+                                <Button variant="secondary" onClick={() => setOpenEditDialog(false)}>Cancel</Button>
+                                <Button onClick={handleProfileUpdate}>Save Changes</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
               </div>
               <Button variant="outline" size="sm" className="ml-auto">
                 <Download className="mr-2 h-4 w-4" />
@@ -218,7 +273,7 @@ export default function ProfilePage() {
         <Card>
           <CardHeader>
             <CardTitle>Recent Assignment Status</CardTitle>
-          </CardHeader>
+          </Header>
           <CardContent>
             <Table>
               <TableHeader>
