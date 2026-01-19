@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,21 @@ import { useToast } from "@/hooks/use-toast";
 export default function QuizTakingPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { toast } = useToast();
-  const quiz = quizzes.find((q) => q.id === params.id);
+  const { id } = params;
+  const quiz = quizzes.find((q) => q.id === id);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState((quiz?.duration || 0) * 60);
   const [tabSwitches, setTabSwitches] = useState(0);
+
+  const handleSubmit = useCallback(() => {
+    toast({
+        title: "Quiz Submitted",
+        description: "Your quiz has been submitted successfully.",
+    });
+    router.push("/dashboard/quizzes");
+  }, [router, toast]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -51,15 +60,7 @@ export default function QuizTakingPage({ params }: { params: { id: string } }) {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
-
-  const handleSubmit = () => {
-    toast({
-        title: "Quiz Submitted",
-        description: "Your quiz has been submitted successfully.",
-    });
-    router.push("/dashboard/quizzes");
-  };
+  }, [handleSubmit, toast]);
 
   const handleNext = () => {
     if (currentQuestionIndex < quizQuestions.length - 1) {
