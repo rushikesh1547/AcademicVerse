@@ -39,7 +39,9 @@ export function UserNav() {
           <DropdownMenuItem>
             <Link href="/dashboard/profile" className='w-full'>Profile</Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>Settings</DropdownMenuItem>
+          <DropdownMenuItem>
+            <Link href="/dashboard/settings" className='w-full'>Settings</Link>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem>

@@ -15,6 +15,7 @@ import {
   User,
   Camera,
   ShieldAlert,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -28,6 +29,7 @@ import { Button } from '@/components/ui/button';
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/profile', icon: User, label: 'Profile' },
+  { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
   {
     label: 'Academics',
     icon: GraduationCap,
