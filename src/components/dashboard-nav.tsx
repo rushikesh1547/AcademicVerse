@@ -13,6 +13,8 @@ import {
   LayoutDashboard,
   Pencil,
   User,
+  Camera,
+  ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -31,6 +33,7 @@ const navItems = [
     icon: GraduationCap,
     subItems: [
       { href: '/dashboard/attendance', icon: BarChart3, label: 'Attendance' },
+      { href: '/dashboard/attendance/mark', icon: Camera, label: 'Mark Attendance' },
       { href: '/dashboard/quizzes', icon: ClipboardCheck, label: 'Quizzes' },
       { href: '/dashboard/assignments', icon: FileText, label: 'Assignments' },
       { href: '/dashboard/resources', icon: BookOpen, label: 'Resources' },
@@ -45,6 +48,7 @@ const navItems = [
     ],
   },
   { href: '/dashboard/notifications', icon: Bell, label: 'Notifications' },
+  { href: '/dashboard/proctoring', icon: ShieldAlert, label: 'AI Proctoring' },
 ];
 
 export function DashboardNav() {
