@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -12,16 +12,23 @@ import { quizzes, quizQuestions } from "@/lib/mock-data";
 import { Terminal, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export default function QuizTakingPage({ params }: { params: { id: string } }) {
+export default function QuizTakingPage() {
   const router = useRouter();
+  const params = useParams();
   const { toast } = useToast();
-  const { id } = params;
+  const id = params.id as string;
   const quiz = quizzes.find((q) => q.id === id);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
-  const [timeLeft, setTimeLeft] = useState((quiz?.duration || 0) * 60);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [tabSwitches, setTabSwitches] = useState(0);
+
+  useEffect(() => {
+    if (quiz) {
+      setTimeLeft(quiz.duration * 60);
+    }
+  }, [quiz]);
 
   const handleSubmit = useCallback(() => {
     toast({
@@ -32,6 +39,8 @@ export default function QuizTakingPage({ params }: { params: { id: string } }) {
   }, [router, toast]);
 
   useEffect(() => {
+    if (!quiz) return;
+
     const handleVisibilityChange = () => {
       if (document.hidden) {
         setTabSwitches((prev) => prev + 1);
@@ -60,7 +69,7 @@ export default function QuizTakingPage({ params }: { params: { id: string } }) {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [handleSubmit, toast]);
+  }, [handleSubmit, toast, quiz]);
 
   const handleNext = () => {
     if (currentQuestionIndex < quizQuestions.length - 1) {
@@ -89,7 +98,7 @@ export default function QuizTakingPage({ params }: { params: { id: string } }) {
         <CardContent>
           <Progress value={progress} className="mb-6" />
           <div className="prose dark:prose-invert max-w-none">
-            <p className="font-semibold text-lg">{currentQuestion.question}</p>
+            <p className="font-semibold text-lg">{currentQuestion?.question}</p>
             <RadioGroup
               onValueChange={(value) => {
                 const newAnswers = [...answers];
@@ -99,7 +108,7 @@ export default function QuizTakingPage({ params }: { params: { id: string } }) {
               value={answers[currentQuestionIndex]}
               className="mt-4 space-y-2"
             >
-              {currentQuestion.options.map((option, index) => (
+              {currentQuestion?.options.map((option, index) => (
                 <div key={index} className="flex items-center space-x-2">
                   <RadioGroupItem value={option} id={`option-${index}`} />
                   <Label htmlFor={`option-${index}`}>{option}</Label>
