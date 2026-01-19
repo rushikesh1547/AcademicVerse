@@ -5,12 +5,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Camera } from 'lucide-react';
+import { Camera, CheckCircle, Loader2, XCircle } from 'lucide-react';
+import { verifyStudentFace, FaceVerificationOutput } from '@/ai/ai-face-verification';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, serverTimestamp } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Badge } from '@/components/ui/badge';
 
 export default function MarkAttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<FaceVerificationOutput | null>(null);
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -42,15 +52,74 @@ export default function MarkAttendancePage() {
     }
   }, [toast]);
 
-  const handleMarkAttendance = () => {
-    // In a real application, you would capture a frame and send it to an AI service for verification.
-    toast({
-      title: 'Attendance Marked',
-      description: 'Your attendance has been recorded for this session.',
-    });
+  const handleMarkAttendance = async () => {
+    if (!videoRef.current || !user) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Camera not ready or user not logged in.",
+        });
+        return;
+    }
+    setIsVerifying(true);
+    setVerificationResult(null);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const context = canvas.getContext('2d');
+    context?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    const capturedPhotoDataUri = canvas.toDataURL('image/jpeg');
+
+    const referenceUserAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-1');
+    if (!referenceUserAvatar) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Reference profile image not found.' });
+        setIsVerifying(false);
+        return;
+    }
+
+    try {
+        const result = await verifyStudentFace({
+            capturedPhotoDataUri,
+            referencePhotoUrl: referenceUserAvatar.imageUrl,
+        });
+        setVerificationResult(result);
+
+        if (result.isVerified) {
+            toast({
+                title: 'Verification Successful!',
+                description: `Confidence: ${(result.confidence * 100).toFixed(2)}%. Attendance marked.`,
+            });
+            const sessionId = 'live-session-1'; // Hardcoded for demonstration
+            const attendanceCollectionRef = collection(firestore, 'attendanceSessions', sessionId, 'attendanceIntervals');
+            addDocumentNonBlocking(attendanceCollectionRef, {
+                sessionId,
+                studentId: user.uid,
+                timestamp: serverTimestamp(),
+                presenceStatus: true,
+                faceRecognitionData: `Verified with ${(result.confidence * 100).toFixed(2)}% confidence`,
+            });
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Verification Failed',
+                description: result.reason || 'Could not verify your identity.',
+            });
+        }
+    } catch (error) {
+        console.error("Error verifying face:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Verification Error',
+            description: 'An unexpected error occurred during face verification.',
+        });
+    } finally {
+        setIsVerifying(false);
+    }
   };
 
   return (
+    <div className="grid gap-6 lg:grid-cols-2">
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -58,12 +127,17 @@ export default function MarkAttendancePage() {
             Mark Attendance
         </CardTitle>
         <CardDescription>
-          Center your face in the camera view and click the button to mark your attendance.
+          Center your face in the camera view and click the button to mark your attendance. This session is being proctored by AI.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-4">
-        <div className="w-full max-w-md aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center">
+        <div className="w-full max-w-md aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
             <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+            {isVerifying && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <Loader2 className="h-12 w-12 text-white animate-spin" />
+                </div>
+            )}
         </div>
         {hasCameraPermission === false && (
           <Alert variant="destructive" className="w-full max-w-md">
@@ -73,10 +147,40 @@ export default function MarkAttendancePage() {
             </AlertDescription>
           </Alert>
         )}
-        <Button onClick={handleMarkAttendance} disabled={!hasCameraPermission}>
-          Mark My Attendance
+        <Button onClick={handleMarkAttendance} disabled={!hasCameraPermission || isVerifying}>
+          {isVerifying ? 'Verifying...' : 'Mark My Attendance'}
         </Button>
       </CardContent>
     </Card>
+    <Card>
+        <CardHeader>
+            <CardTitle>Verification Result</CardTitle>
+            <CardDescription>Result from the AI face verification system.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {!verificationResult && !isVerifying && <p className="text-sm text-muted-foreground">Click the button to start verification.</p>}
+            {isVerifying && <p className="text-sm text-muted-foreground">Verification in progress...</p>}
+            {verificationResult && (
+                <div className="space-y-4">
+                    <div>
+                        <h3 className="font-semibold">Status:</h3>
+                        <Badge variant={verificationResult.isVerified ? "default" : "destructive"} className="gap-1.5 pl-1.5">
+                            {verificationResult.isVerified ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                            {verificationResult.isVerified ? "Verified" : "Not Verified"}
+                        </Badge>
+                    </div>
+                     <div>
+                        <h3 className="font-semibold">Confidence Score:</h3>
+                        <p className="text-sm font-mono text-muted-foreground">{`${(verificationResult.confidence * 100).toFixed(2)}%`}</p>
+                     </div>
+                     <div>
+                        <h3 className="font-semibold">AI Reason:</h3>
+                        <p className="text-sm text-muted-foreground">{verificationResult.reason}</p>
+                     </div>
+                </div>
+            )}
+        </CardContent>
+    </Card>
+    </div>
   );
 }

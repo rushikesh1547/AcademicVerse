@@ -79,6 +79,10 @@
           "type": "string",
           "description": "Unique identifier for the AttendanceSession entity."
         },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to Teacher who created the session."
+        },
         "startTime": {
           "type": "string",
           "description": "The start time of the attendance session.",
@@ -92,6 +96,7 @@
       },
       "required": [
         "id",
+        "teacherId",
         "startTime"
       ]
     },

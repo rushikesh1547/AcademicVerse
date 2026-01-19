@@ -17,10 +17,10 @@ const FaceVerificationInputSchema = z.object({
     .describe(
       "A photo of a student captured from a webcam, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  referencePhotoDataUri: z
+  referencePhotoUrl: z
     .string()
     .describe(
-      "The student's reference profile photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A URL to the student's reference profile photo."
     ),
 });
 export type FaceVerificationInput = z.infer<typeof FaceVerificationInputSchema>;
@@ -55,7 +55,7 @@ const prompt = ai.definePrompt({
 Analyze the two images provided: a live captured photo and a reference photo.
 
 - Captured Photo: {{media url=capturedPhotoDataUri}}
-- Reference Photo: {{media url=referencePhotoDataUri}}
+- Reference Photo: {{media url=referencePhotoUrl}}
 
 Carefully compare facial features, structure, and any unique identifiers. Based on your analysis, determine if the person in the captured photo is the same as the person in the reference photo.
 

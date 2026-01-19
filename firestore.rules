@@ -152,8 +152,8 @@ service cloud.firestore {
     match /attendanceSessions/{sessionId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      // CRITICAL: Cannot implement owner-only writes. The 'AttendanceSession' entity is missing an 'ownerId' or 'teacherId' field.
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isSessionOwner(sessionId);
     }
 
     /**
@@ -165,10 +165,9 @@ service cloud.firestore {
      */
     match /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId} {
       allow get: if isSignedIn() && (isSessionOwner(sessionId) || resource.data.studentId == request.auth.uid);
-      allow list: if isSessionOwner(sessionId);
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow list: if isSessionOwner(sessionId) || isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update, delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;
     }
 
     /**
