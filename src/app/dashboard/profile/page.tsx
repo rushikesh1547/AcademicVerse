@@ -18,7 +18,6 @@ import {
   DialogDescription,
   DialogFooter,
   DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { attendanceSummary, assignments } from '@/lib/mock-data';
@@ -46,10 +45,12 @@ export default function ProfilePage() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    async function setupCamera() {
-      if (open && !isCameraReady) {
+    // This effect handles the camera lifecycle based on the dialog's `open` state.
+    if (open) {
+      let stream: MediaStream | null = null;
+      const setupCamera = async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
             videoRef.current.onloadedmetadata = () => {
@@ -65,18 +66,24 @@ export default function ProfilePage() {
           });
           setOpen(false);
         }
-      }
-    }
-    setupCamera();
+      };
 
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((track) => track.stop());
+      setupCamera();
+
+      // Cleanup function: This will be called when the dialog closes
+      // or when the component unmounts.
+      return () => {
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
         setIsCameraReady(false);
-      }
-    };
-  }, [open, isCameraReady, toast]);
+      };
+    }
+  }, [open, toast, setOpen]);
+
 
   const handleCaptureAndSave = async () => {
     if (!videoRef.current || !userDocRef) return;
