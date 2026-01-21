@@ -95,6 +95,15 @@ export default function MarkAttendancePage() {
         });
         setVerificationResult(result);
 
+        if (result.faceCount !== 1) {
+          toast({
+              variant: 'destructive',
+              title: 'Verification Failed',
+              description: result.reason || 'Multiple faces or no face detected. Please ensure only you are in the frame.',
+          });
+          return;
+        }
+
         if (result.isVerified && result.confidence >= VERIFICATION_THRESHOLD) {
             toast({
                 title: 'Verification Successful!',
@@ -125,7 +134,9 @@ export default function MarkAttendancePage() {
         toast({
             variant: 'destructive',
             title: 'Verification Error',
-            description: 'An unexpected error occurred during face verification.',
+            description: error.message?.includes('leaked')
+                ? 'Your API key was reported as leaked. Please generate a new one.'
+                : 'An unexpected error occurred during face verification.',
         });
     } finally {
         setIsVerifying(false);
@@ -214,14 +225,18 @@ export default function MarkAttendancePage() {
                 <div className="space-y-4">
                     <div>
                         <h3 className="font-semibold">Status:</h3>
-                        <Badge variant={verificationResult.isVerified && verificationResult.confidence >= VERIFICATION_THRESHOLD ? "default" : "destructive"} className="gap-1.5 pl-1.5">
-                            {verificationResult.isVerified && verificationResult.confidence >= VERIFICATION_THRESHOLD ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                            {verificationResult.isVerified && verificationResult.confidence >= VERIFICATION_THRESHOLD ? "Verified" : "Not Verified"}
+                        <Badge variant={verificationResult.faceCount === 1 && verificationResult.isVerified && verificationResult.confidence >= VERIFICATION_THRESHOLD ? "default" : "destructive"} className="gap-1.5 pl-1.5">
+                            {verificationResult.faceCount === 1 && verificationResult.isVerified && verificationResult.confidence >= VERIFICATION_THRESHOLD ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                            {verificationResult.faceCount === 1 && verificationResult.isVerified && verificationResult.confidence >= VERIFICATION_THRESHOLD ? "Verified" : "Not Verified"}
                         </Badge>
                     </div>
                      <div>
                         <h3 className="font-semibold">Confidence Score:</h3>
                         <p className="text-sm font-mono text-muted-foreground">{`${(verificationResult.confidence * 100).toFixed(2)}%`}</p>
+                     </div>
+                     <div>
+                        <h3 className="font-semibold">Detected Faces:</h3>
+                        <p className="text-sm font-mono text-muted-foreground">{verificationResult.faceCount}</p>
                      </div>
                      <div>
                         <h3 className="font-semibold">AI Reason:</h3>

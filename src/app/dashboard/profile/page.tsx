@@ -33,6 +33,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { detectFaces } from '@/ai/ai-face-detection';
 
 const ENROLLMENT_STEPS = ['Front View', 'Left Profile', 'Right Profile'];
 
@@ -55,6 +56,7 @@ export default function ProfilePage() {
   const [enrollmentStep, setEnrollmentStep] = useState(0);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   // State for edit dialog
   const [openEditDialog, setOpenEditDialog] = useState(false);
@@ -136,9 +138,11 @@ export default function ProfilePage() {
   }, [stream, toast]);
 
 
-  const handleCapture = () => {
+  const handleCapture = async () => {
     if (!videoRef.current) return;
     
+    setIsCapturing(true);
+
     const canvas = document.createElement('canvas');
     canvas.width = 640;
     canvas.height = 480;
@@ -146,11 +150,36 @@ export default function ProfilePage() {
     context?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
     
-    setCapturedImages(prev => {
-        const newImages = [...prev];
-        newImages[enrollmentStep] = imageDataUrl;
-        return newImages;
-    });
+    try {
+        const detectionResult = await detectFaces({ photoDataUri: imageDataUrl });
+
+        if (detectionResult.faceCount === 1) {
+            setCapturedImages(prev => {
+                const newImages = [...prev];
+                newImages[enrollmentStep] = imageDataUrl;
+                return newImages;
+            });
+            toast({
+                title: "Image Captured!",
+                description: "Ready for the next step.",
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Capture Failed",
+                description: detectionResult.reason || "Could not capture image. Please ensure only one face is clearly visible."
+            });
+        }
+    } catch (error) {
+        console.error("Error detecting face:", error);
+        toast({
+            variant: "destructive",
+            title: "Capture Error",
+            description: "An unexpected error occurred during face detection."
+        });
+    } finally {
+        setIsCapturing(false);
+    }
   };
 
   const handleSaveEnrollment = async () => {
@@ -330,8 +359,8 @@ export default function ProfilePage() {
                 <DialogClose asChild>
                   <Button variant="secondary" onClick={resetEnrollment}>Cancel</Button>
                 </DialogClose>
-                <Button onClick={handleCapture} disabled={!stream}>
-                    <Camera className="mr-2 h-4 w-4" />
+                <Button onClick={handleCapture} disabled={!stream || isCapturing}>
+                    {isCapturing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Camera className="mr-2 h-4 w-4" />}
                     Capture Image
                 </Button>
                 {enrollmentStep < ENROLLMENT_STEPS.length - 1 ? (
