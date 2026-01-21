@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -66,54 +66,54 @@ export default function ProfilePage() {
     }
   }, [userData?.displayName]);
 
-  const startCamera = useCallback(async () => {
-    if (videoRef.current && !videoRef.current.srcObject) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await new Promise((resolve) => {
-            if(videoRef.current) videoRef.current.onloadedmetadata = resolve
-          });
-          setIsCameraReady(true);
-        }
-      } catch (err) {
-        console.error("Error accessing camera:", err);
-        toast({
-          variant: 'destructive',
-          title: 'Camera Error',
-          description: 'Could not access camera. Please check permissions.',
-        });
-        setOpenEnrollDialog(false);
-      }
-    }
-  }, [toast]);
-  
-  const stopCamera = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-      setIsCameraReady(false);
-    }
-  }, []);
-
+  // This effect manages the camera lifecycle based on the dialog's open state.
   useEffect(() => {
-    if (openEnrollDialog) {
-      startCamera();
-    } else {
-      stopCamera();
-    }
-    // Cleanup on unmount
-    return stopCamera;
-  }, [openEnrollDialog, startCamera, stopCamera]);
+    let stream: MediaStream | null = null;
+    const videoElement = videoRef.current;
 
+    const enableCamera = async () => {
+      if (videoElement) {
+        setIsCameraReady(false);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          videoElement.srcObject = stream;
+          videoElement.onloadedmetadata = () => {
+            videoElement.play();
+            setIsCameraReady(true);
+          };
+        } catch (err) {
+          console.error("Error accessing camera:", err);
+          toast({
+            variant: 'destructive',
+            title: 'Camera Error',
+            description: 'Could not access camera. Please check permissions.',
+          });
+          setOpenEnrollDialog(false);
+        }
+      }
+    };
+
+    if (openEnrollDialog) {
+      enableCamera();
+    }
+
+    // Cleanup function to stop camera when dialog closes or component unmounts
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      if (videoElement) {
+        videoElement.srcObject = null;
+        videoElement.onloadedmetadata = null;
+      }
+      setIsCameraReady(false);
+    };
+  }, [openEnrollDialog, toast]);
 
   const handleCapture = () => {
     if (!videoRef.current) return;
     
     const canvas = document.createElement('canvas');
-    // Capture at a smaller resolution to keep data URI size manageable
     canvas.width = 640;
     canvas.height = 480;
     const context = canvas.getContext('2d');
@@ -125,14 +125,10 @@ export default function ProfilePage() {
         newImages[enrollmentStep] = imageDataUrl;
         return newImages;
     });
-
-    if (enrollmentStep < ENROLLMENT_STEPS.length - 1) {
-        setEnrollmentStep(prev => prev + 1);
-    }
   };
 
   const handleSaveEnrollment = async () => {
-    if (!userDocRef || capturedImages.length < ENROLLMENT_STEPS.length) {
+    if (!userDocRef || capturedImages.filter(Boolean).length < ENROLLMENT_STEPS.length) {
         toast({ title: "Error", description: "Please capture all required images.", variant: "destructive" });
         return;
     }
@@ -285,7 +281,7 @@ export default function ProfilePage() {
                     Please position your face as requested and capture the image.
                 </DialogDescription>
             </DialogHeader>
-            <Progress value={((enrollmentStep + 1) / ENROLLMENT_STEPS.length) * 100} className="w-full" />
+            <Progress value={((capturedImages.filter(Boolean).length) / ENROLLMENT_STEPS.length) * 100} className="w-full" />
             <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2 w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
                     <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
@@ -308,20 +304,20 @@ export default function ProfilePage() {
                 <DialogClose asChild>
                   <Button variant="secondary" onClick={resetEnrollment}>Cancel</Button>
                 </DialogClose>
-                {enrollmentStep < ENROLLMENT_STEPS.length -1 ? (
-                    <Button onClick={handleCapture} disabled={!isCameraReady || !capturedImages[enrollmentStep]}>
-                       <Camera className="mr-2 h-4 w-4" /> Next Step
+                <Button onClick={handleCapture} disabled={!isCameraReady}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Capture Image
+                </Button>
+                {enrollmentStep < ENROLLMENT_STEPS.length - 1 ? (
+                    <Button onClick={() => setEnrollmentStep(step => step + 1)} disabled={!capturedImages[enrollmentStep]}>
+                       Next Step
                     </Button>
                 ) : (
-                     <Button onClick={handleSaveEnrollment} disabled={!isCameraReady || isSaving || !capturedImages[enrollmentStep]}>
+                     <Button onClick={handleSaveEnrollment} disabled={isSaving || !capturedImages[enrollmentStep]}>
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                         Complete & Save
                     </Button>
                 )}
-                 <Button onClick={handleCapture} disabled={!isCameraReady}>
-                    <Camera className="mr-2 h-4 w-4" />
-                    Capture
-                </Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
