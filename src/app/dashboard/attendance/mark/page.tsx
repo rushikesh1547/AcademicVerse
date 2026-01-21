@@ -119,12 +119,18 @@ export default function MarkAttendancePage() {
                 description: description,
             });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error verifying face:", error);
+        let toastTitle = 'Verification Error';
+        let toastDescription = 'An unexpected error occurred during face verification.';
+        if (error?.message?.includes('API key was reported as leaked')) {
+            toastTitle = 'API Key Error';
+            toastDescription = 'Your API key has been leaked and disabled. Please generate a new one and update it in your .env file.';
+        }
         toast({
             variant: 'destructive',
-            title: 'Verification Error',
-            description: 'An unexpected error occurred during face verification.',
+            title: toastTitle,
+            description: toastDescription,
         });
     } finally {
         setIsVerifying(false);
