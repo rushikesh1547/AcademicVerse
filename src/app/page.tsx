@@ -83,7 +83,7 @@ export default function AuthPage() {
           variant: 'destructive',
           title: 'Login Failed',
           description:
-            'Email/Password sign-in is not enabled. Please ask an admin to enable it in the Firebase console.',
+            'Email/Password sign-in is not enabled. Please enable it in the Firebase console.',
         });
       } else {
         toast({
@@ -115,7 +115,7 @@ export default function AuthPage() {
           variant: 'destructive',
           title: 'Registration Failed',
           description:
-            'Email/Password sign-up is not enabled. Please ask an admin to enable it in the Firebase console.',
+            'Email/Password sign-up is not enabled. Please enable it in the Firebase console.',
         });
       } else {
         toast({
@@ -142,7 +142,7 @@ export default function AuthPage() {
           variant: 'destructive',
           title: 'Google Sign-In Failed',
           description:
-            'Google Sign-In is not enabled for this project. Please ask an admin to enable it in the Firebase console.',
+            'Google Sign-In is not enabled for this project. Please enable it in the Firebase console.',
         });
       } else {
         console.error('Google sign-in error:', error);
