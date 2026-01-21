@@ -48,13 +48,13 @@ export default function ProfilePage() {
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isCameraReady, setIsCameraReady] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
   // State for enrollment dialog
   const [openEnrollDialog, setOpenEnrollDialog] = useState(false);
   const [enrollmentStep, setEnrollmentStep] = useState(0);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   // State for edit dialog
   const [openEditDialog, setOpenEditDialog] = useState(false);
@@ -66,49 +66,75 @@ export default function ProfilePage() {
     }
   }, [userData?.displayName]);
 
-  // This effect manages the camera lifecycle based on the dialog's open state.
+  // This effect manages the camera stream lifecycle based on the dialog's open state.
   useEffect(() => {
-    let stream: MediaStream | null = null;
-    const videoElement = videoRef.current;
+    // If the dialog is not open, we don't need the camera.
+    if (!openEnrollDialog) {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
+      }
+      return;
+    }
 
-    const enableCamera = async () => {
-      if (videoElement) {
-        setIsCameraReady(false);
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          videoElement.srcObject = stream;
-          videoElement.onloadedmetadata = () => {
-            videoElement.play();
-            setIsCameraReady(true);
-          };
-        } catch (err) {
+    // A flag to prevent state updates if the component unmounts while waiting for the camera.
+    let isCancelled = false;
+
+    const getCameraStream = async () => {
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (!isCancelled) {
+          setStream(newStream);
+        } else {
+          // If the component unmounted while we were getting permission, clean up the new stream.
+          newStream.getTracks().forEach(track => track.stop());
+        }
+      } catch (err) {
+        if (!isCancelled) {
           console.error("Error accessing camera:", err);
           toast({
             variant: 'destructive',
             title: 'Camera Error',
-            description: 'Could not access camera. Please check permissions.',
+            description: 'Could not access camera. Please check permissions and try again.',
           });
+          // Close the dialog on error.
           setOpenEnrollDialog(false);
         }
       }
     };
 
-    if (openEnrollDialog) {
-      enableCamera();
-    }
+    getCameraStream();
 
-    // Cleanup function to stop camera when dialog closes or component unmounts
+    // Cleanup function: runs when the dialog is closed or the component unmounts.
     return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      isCancelled = true;
+      // This check is important because the stream might be from a previous render
+      if (videoRef.current && videoRef.current.srcObject) {
+        const currentStream = videoRef.current.srcObject as MediaStream;
+        currentStream.getTracks().forEach((track) => track.stop());
       }
-      if (videoElement) {
-        videoElement.srcObject = null;
-        videoElement.onloadedmetadata = null;
-      }
-      setIsCameraReady(false);
+      setStream(null);
     };
-  }, [openEnrollDialog, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openEnrollDialog]);
+
+  // This effect connects the stream to the video element whenever the stream is available.
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (videoElement && stream) {
+      videoElement.srcObject = stream;
+      // The `playsInline` prop on the video element is important for iOS.
+      videoElement.play().catch(error => {
+        console.error("Error playing video:", error);
+        toast({
+          variant: "destructive",
+          title: "Video Playback Error",
+          description: "Could not start the camera feed.",
+        });
+      });
+    }
+  }, [stream, toast]);
+
 
   const handleCapture = () => {
     if (!videoRef.current) return;
@@ -258,12 +284,12 @@ export default function ProfilePage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid md:grid-cols-3 gap-4 items-center">
-                {userData?.faceProfileImageUrls?.map((url, index) => (
+                {(userData?.faceProfileImageUrls?.length || 0) > 0 ? userData.faceProfileImageUrls.map((url, index) => (
                     <div key={index} className="relative aspect-square w-full max-w-[200px] mx-auto bg-muted rounded-md overflow-hidden">
                        <Image src={url} alt={`Enrolled photo ${index + 1}`} layout="fill" objectFit="cover" />
                        <Badge className="absolute top-2 right-2">{ENROLLMENT_STEPS[index]}</Badge>
                     </div>
-                )) || <p className="text-sm text-muted-foreground md:col-span-3 text-center">No face enrollment photos found.</p>}
+                )) : <p className="text-sm text-muted-foreground md:col-span-3 text-center">No face enrollment photos found.</p>}
             </CardContent>
             <CardFooter>
                  <DialogTrigger asChild>
@@ -285,7 +311,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2 w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
                     <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                    {!isCameraReady && (
+                    {!stream && (
                         <div className="absolute inset-0 flex items-center justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
@@ -304,7 +330,7 @@ export default function ProfilePage() {
                 <DialogClose asChild>
                   <Button variant="secondary" onClick={resetEnrollment}>Cancel</Button>
                 </DialogClose>
-                <Button onClick={handleCapture} disabled={!isCameraReady}>
+                <Button onClick={handleCapture} disabled={!stream}>
                     <Camera className="mr-2 h-4 w-4" />
                     Capture Image
                 </Button>
