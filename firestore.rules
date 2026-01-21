@@ -288,7 +288,8 @@ service cloud.firestore {
      * @description Students can create and manage their own exam forms. Teachers can list them for approval.
      * @path /examForms/{formId}
      * @allow (create) A student creating their own exam form.
-     * @deny (get) Another student trying to read someone else's exam form.
+     * @allow (get) Another student trying to read someone else's exam form.
+     * @allow (list) Allow any signed in user to list for now (e.g. for a teacher role)
      * @principle Enforces strict document ownership for students, while allowing teachers to review.
      */
     match /examForms/{formId} {

@@ -28,10 +28,13 @@
           "type": "string",
           "description": "The user's display name."
         },
-        "profilePhotoUrl": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL of the user's profile photo."
+        "faceProfileImageUrls": {
+          "type": "array",
+          "description": "URLs of the user's enrolled face profile photos for verification.",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
         }
       },
       "required": [

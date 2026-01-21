@@ -12,6 +12,9 @@ import { collection, serverTimestamp, doc } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
+const FACE_ENROLLMENT_MIN_IMAGES = 3;
+const VERIFICATION_THRESHOLD = 0.8; // 80% confidence required
+
 export default function MarkAttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -66,11 +69,11 @@ export default function MarkAttendancePage() {
         });
         return;
     }
-    if (!userData.profilePhotoUrl) {
+    if (!userData.faceProfileImageUrls || userData.faceProfileImageUrls.length < FACE_ENROLLMENT_MIN_IMAGES) {
         toast({
             variant: "destructive",
-            title: "Profile Photo Missing",
-            description: "Please set your profile photo on the profile page before marking attendance.",
+            title: "Face Enrollment Incomplete",
+            description: `Please complete face enrollment on the profile page. ${FACE_ENROLLMENT_MIN_IMAGES} photos are required.`,
         });
         return;
     }
@@ -84,13 +87,11 @@ export default function MarkAttendancePage() {
     const context = canvas.getContext('2d');
     context?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     const capturedPhotoDataUri = canvas.toDataURL('image/jpeg');
-    
-    const VERIFICATION_THRESHOLD = 0.8; // 80% confidence required
 
     try {
         const result = await verifyStudentFace({
             capturedPhotoDataUri,
-            referencePhotoUrl: userData.profilePhotoUrl,
+            referencePhotoUrls: userData.faceProfileImageUrls,
         });
         setVerificationResult(result);
 
@@ -121,21 +122,17 @@ export default function MarkAttendancePage() {
         }
     } catch (error: any) {
         console.error("Error verifying face:", error);
-        let toastTitle = 'Verification Error';
-        let toastDescription = 'An unexpected error occurred during face verification.';
-        if (error?.message?.includes('API key was reported as leaked')) {
-            toastTitle = 'API Key Error';
-            toastDescription = 'Your API key has been leaked and disabled. Please generate a new one and update it in your .env file.';
-        }
         toast({
             variant: 'destructive',
-            title: toastTitle,
-            description: toastDescription,
+            title: 'Verification Error',
+            description: 'An unexpected error occurred during face verification.',
         });
     } finally {
         setIsVerifying(false);
     }
   };
+
+  const isEnrollmentComplete = userData?.faceProfileImageUrls && userData.faceProfileImageUrls.length >= FACE_ENROLLMENT_MIN_IMAGES;
 
   const getButtonState = () => {
     if (isUserLoading || isUserDataLoading) {
@@ -150,8 +147,8 @@ export default function MarkAttendancePage() {
     if (!hasCameraPermission) {
       return { disabled: true, text: 'Camera Disabled' };
     }
-    if (!userData?.profilePhotoUrl) {
-      return { disabled: true, text: 'Set Profile Photo First' };
+    if (!isEnrollmentComplete) {
+      return { disabled: true, text: 'Complete Face Enrollment First' };
     }
     return { disabled: false, text: 'Mark My Attendance' };
   };
@@ -187,12 +184,12 @@ export default function MarkAttendancePage() {
             </AlertDescription>
           </Alert>
         )}
-        {!isUserDataLoading && !userData?.profilePhotoUrl && (
+        {!isUserDataLoading && !isEnrollmentComplete && (
             <Alert className="w-full max-w-md">
                 <Info className="h-4 w-4" />
                 <AlertTitle>Action Required</AlertTitle>
                 <AlertDescription>
-                    You need to set a profile photo before you can mark your attendance.
+                    You need to complete your face enrollment before you can mark attendance.
                     <Button asChild variant="link" className="p-1 h-auto">
                         <Link href="/dashboard/profile">Go to Profile Page</Link>
                     </Button>
@@ -217,9 +214,9 @@ export default function MarkAttendancePage() {
                 <div className="space-y-4">
                     <div>
                         <h3 className="font-semibold">Status:</h3>
-                        <Badge variant={verificationResult.isVerified && verificationResult.confidence >= 0.8 ? "default" : "destructive"} className="gap-1.5 pl-1.5">
-                            {verificationResult.isVerified && verificationResult.confidence >= 0.8 ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                            {verificationResult.isVerified && verificationResult.confidence >= 0.8 ? "Verified" : "Not Verified"}
+                        <Badge variant={verificationResult.isVerified && verificationResult.confidence >= VERIFICATION_THRESHOLD ? "default" : "destructive"} className="gap-1.5 pl-1.5">
+                            {verificationResult.isVerified && verificationResult.confidence >= VERIFICATION_THRESHOLD ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                            {verificationResult.isVerified && verificationResult.confidence >= VERIFICATION_THRESHOLD ? "Verified" : "Not Verified"}
                         </Badge>
                     </div>
                      <div>

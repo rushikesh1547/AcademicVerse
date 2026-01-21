@@ -33,7 +33,7 @@ export function UserNav() {
 
   const userDisplayName = userData?.displayName || 'Student';
   const userEmail = userData?.email || '';
-  const userAvatarUrl = userData?.profilePhotoUrl;
+  const userAvatarUrl = userData?.faceProfileImageUrls?.[0];
   const fallback = userDisplayName?.charAt(0).toUpperCase() || 'S';
 
   return (

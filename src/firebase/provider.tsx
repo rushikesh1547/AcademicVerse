@@ -90,7 +90,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || 'New Student',
               role: 'student', // Default role
-              profilePhotoUrl: firebaseUser.photoURL || '',
+              faceProfileImageUrls: [],
             };
             // We use a blocking setDoc here because it's a critical, one-time setup operation.
             await setDoc(userDocRef, newUserDoc);

@@ -17,10 +17,10 @@ const FaceVerificationInputSchema = z.object({
     .describe(
       "A photo of a student captured from a webcam, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  referencePhotoUrl: z
-    .string()
+  referencePhotoUrls: z
+    .array(z.string())
     .describe(
-      "A URL to the student's reference profile photo."
+      "An array of URLs to the student's reference profile photos from different angles."
     ),
 });
 export type FaceVerificationInput = z.infer<typeof FaceVerificationInputSchema>;
@@ -50,16 +50,19 @@ const prompt = ai.definePrompt({
   name: 'faceVerificationPrompt',
   input: {schema: FaceVerificationInputSchema},
   output: {schema: FaceVerificationOutputSchema},
-  prompt: `You are an expert AI face verification system. Your task is to determine if two images are of the same person with a very high degree of certainty.
+  prompt: `You are an expert AI face verification system. Your task is to determine if a live captured image is of the same person represented by a set of reference photos.
 
-Analyze the two images provided: a live captured photo and a reference photo.
+First, analyze the following reference photos to build a comprehensive and robust understanding of the person's face from different angles (front, left, right).
+{{#each referencePhotoUrls}}
+- Reference Image: {{media url=this}}
+{{/each}}
 
+Now, compare the model you have built from the reference images against this live captured photo:
 - Captured Photo: {{media url=capturedPhotoDataUri}}
-- Reference Photo: {{media url=referencePhotoUrl}}
 
-**Your analysis must be strict.** Only determine the faces are a match if you are very confident. Carefully compare facial features, structure, and any unique identifiers like moles or scars. Pay close attention to the shape of the eyes, nose, and jawline.
+**Your analysis must be strict.** Only determine the faces are a match if you are very confident. Carefully compare facial features, structure, and any unique identifiers. Pay close attention to the shape of the eyes, nose, and jawline across all provided images.
 
-Based on your strict analysis, determine if the person in the captured photo is the same as the person in the reference photo.
+Based on your strict analysis, determine if the person in the captured photo is the same as the person in the reference photos.
 
 Set 'isVerified' to true ONLY if you are highly certain they are the same person. Otherwise, set it to false.
 Provide a 'confidence' score from 0.0 to 1.0 representing your certainty. A score of 1.0 means a perfect, undeniable match. A score below 0.8 should be treated with suspicion.
