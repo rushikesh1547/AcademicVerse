@@ -4,8 +4,8 @@ import {
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  // Assume getAuth and app are initialized elsewhere
 } from 'firebase/auth';
+import { toast } from '@/hooks/use-toast';
 
 /** Initiate anonymous sign-in (non-blocking). */
 export function initiateAnonymousSignIn(authInstance: Auth): void {
@@ -13,6 +13,11 @@ export function initiateAnonymousSignIn(authInstance: Auth): void {
   signInAnonymously(authInstance).catch((error) => {
     // We can log this, but for anonymous sign-in, failures are less common unless disabled.
     console.error("Anonymous sign-in error:", error);
+    toast({
+      variant: 'destructive',
+      title: 'Anonymous Sign-In Failed',
+      description: 'Could not sign you in anonymously. Please try again.',
+    });
   });
   // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
 }
@@ -23,8 +28,19 @@ export function initiateEmailSignUp(authInstance: Auth, email: string, password:
   createUserWithEmailAndPassword(authInstance, email, password).catch((error) => {
       // This error is expected if the user already exists, which is a possible outcome
       // of our sign-in-then-sign-up logic. We don't need to log it as a critical error.
-      if (error.code !== 'auth/email-already-in-use') {
+      if (error.code === 'auth/email-already-in-use') {
+        toast({
+          variant: 'destructive',
+          title: 'Registration Failed',
+          description: 'This email is already in use. Please log in instead.',
+        });
+      } else {
         console.error("Sign up error:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Registration Error',
+          description: error.message,
+        });
       }
   });
   // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
@@ -35,11 +51,20 @@ export function initiateEmailSignIn(authInstance: Auth, email: string, password:
   // CRITICAL: Call signInWithEmailAndPassword directly. Do NOT use 'await signInWithEmailAndPassword(...)'.
   signInWithEmailAndPassword(authInstance, email, password)
     .catch((error) => {
-        // The 'auth/invalid-credential' error is thrown for security reasons if the user
-        // doesn't exist or the password is wrong. For this prototyping tool, we'll
-        // assume a failed sign-in means the user needs to be created.
-        console.warn(`Sign-in for ${email} failed (Code: ${error.code}). Attempting to create a new account.`);
-        initiateEmailSignUp(authInstance, email, password);
+        if (error.code === 'auth/invalid-credential') {
+            toast({
+              variant: 'destructive',
+              title: 'Login Failed',
+              description: 'Invalid email or password. Please try again or sign up.',
+            });
+        } else {
+            console.error("Sign in error:", error);
+            toast({
+              variant: 'destructive',
+              title: 'Login Error',
+              description: error.message,
+            });
+        }
     });
   // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
 }
