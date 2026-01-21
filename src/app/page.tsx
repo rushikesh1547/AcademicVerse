@@ -78,11 +78,20 @@ export default function AuthPage() {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       router.push('/dashboard');
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid email or password. Please try again.',
-      });
+      if (error.code === 'auth/operation-not-allowed') {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description:
+            'Email/Password sign-in is not enabled. Please ask an admin to enable it in the Firebase console.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: 'Invalid email or password. Please try again.',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -101,19 +110,25 @@ export default function AuthPage() {
           title: 'Registration Failed',
           description: 'This email is already in use. Please log in instead.',
         });
+      } else if (error.code === 'auth/operation-not-allowed') {
+        toast({
+          variant: 'destructive',
+          title: 'Registration Failed',
+          description:
+            'Email/Password sign-up is not enabled. Please ask an admin to enable it in the Firebase console.',
+        });
       } else {
         toast({
           variant: 'destructive',
           title: 'Registration Error',
-          description:
-            'An unexpected error occurred. Please try again.',
+          description: 'An unexpected error occurred. Please try again.',
         });
       }
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleGoogleSignIn = async () => {
     if (!auth) return;
     setIsLoading(true);
@@ -121,13 +136,22 @@ export default function AuthPage() {
     try {
       await signInWithPopup(auth, provider);
       router.push('/dashboard');
-    } catch (error) {
-      console.error('Google sign-in error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Google Sign-In Failed',
-        description: 'Could not sign you in with Google. Please try again.',
-      });
+    } catch (error: any) {
+      if (error.code === 'auth/operation-not-allowed') {
+        toast({
+          variant: 'destructive',
+          title: 'Google Sign-In Failed',
+          description:
+            'Google Sign-In is not enabled for this project. Please ask an admin to enable it in the Firebase console.',
+        });
+      } else {
+        console.error('Google sign-in error:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Google Sign-In Failed',
+          description: 'Could not sign you in with Google. Please try again.',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
