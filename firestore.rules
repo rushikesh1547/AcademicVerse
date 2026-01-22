@@ -184,14 +184,15 @@ service cloud.firestore {
     }
 
     /**
-     * @description Students can create and manage their own assignment submissions. The assignment owner can read/list them for grading.
+     * @description Students can create/update their own submissions. Teachers can list submissions and update them for grading.
      * @path /assignments/{assignmentId}/assignmentSubmissions/{submissionId}
      */
     match /assignments/{assignmentId}/assignmentSubmissions/{submissionId} {
       allow get: if (isExistingDoc() && resource.data.studentId == request.auth.uid) || isAssignmentOwner(assignmentId);
       allow list: if isAssignmentOwner(assignmentId);
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow update, delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;
+      allow update: if (isExistingDoc() && resource.data.studentId == request.auth.uid) || isAssignmentOwner(assignmentId);
+      allow delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;
     }
 
     /**

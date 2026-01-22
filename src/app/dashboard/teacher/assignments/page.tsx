@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -23,7 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2, FilePlus2 } from 'lucide-react';
+import { Loader2, FilePlus2, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   useUser,
@@ -136,6 +137,10 @@ export default function CreateAssignmentPage() {
       description: `${data.title} has been successfully created.`,
     });
     
+    // Clear file input manually
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+    
     form.reset();
     setIsUploading(false);
   }
@@ -219,6 +224,7 @@ export default function CreateAssignmentPage() {
                     <FormControl>
                       <Input
                         {...fieldProps}
+                        value={undefined} // controlled by react-hook-form
                         type="file"
                         onChange={(event) =>
                           onChange(event.target.files && event.target.files[0])
@@ -264,8 +270,8 @@ export default function CreateAssignmentPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
-                  <TableHead>Subject</TableHead>
                   <TableHead>Due Date</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -274,8 +280,15 @@ export default function CreateAssignmentPage() {
                     <TableCell className="font-medium">
                       {assignment.title}
                     </TableCell>
-                    <TableCell>{assignment.subject}</TableCell>
                     <TableCell>{assignment.dueDate && assignment.dueDate.split('-').reverse().join('-')}</TableCell>
+                    <TableCell className="text-right">
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/dashboard/teacher/assignments/${assignment.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Submissions
+                            </Link>
+                        </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

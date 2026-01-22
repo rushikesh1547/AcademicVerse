@@ -335,10 +335,6 @@
       "type": "object",
       "description": "Represents a student's submission for an assignment.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the AssignmentSubmission entity."
-        },
         "assignmentId": {
           "type": "string",
           "description": "Reference to Assignment. (Relationship: Assignment 1:N AssignmentSubmission)"
@@ -347,9 +343,14 @@
           "type": "string",
           "description": "Reference to Student. (Relationship: Student 1:N AssignmentSubmission)"
         },
-        "submissionImageUrl": {
+        "studentName": {
+            "type": "string",
+            "description": "The name of the student who submitted the assignment."
+        },
+        "submissionFileUrl": {
           "type": "string",
-          "description": "The URL of the submitted image."
+          "format": "uri",
+          "description": "The URL of the submitted file in Firebase Storage."
         },
         "submissionTimestamp": {
           "type": "string",
@@ -358,15 +359,21 @@
         },
         "evaluationStatus": {
           "type": "string",
-          "description": "The evaluation status of the submission."
+          "description": "The evaluation status of the submission.",
+          "enum": ["Submitted", "Evaluated"]
+        },
+        "marks": {
+            "type": "number",
+            "description": "Marks awarded by the teacher, out of 10. Null until evaluated."
         }
       },
       "required": [
-        "id",
         "assignmentId",
         "studentId",
-        "submissionImageUrl",
-        "submissionTimestamp"
+        "studentName",
+        "submissionFileUrl",
+        "submissionTimestamp",
+        "evaluationStatus"
       ]
     },
     "Resource": {
