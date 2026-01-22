@@ -196,9 +196,9 @@ export default function AssignmentsPage() {
   const { data: submissions, isLoading: isLoadingSubmissions } = useCollection(submissionsQuery);
 
   const combinedData = useMemo(() => {
-    if (!assignments || !submissions) return [];
+    if (!assignments) return [];
     
-    const submissionsMap = new Map(submissions.map(sub => [sub.assignmentId, sub]));
+    const submissionsMap = new Map(submissions?.map(sub => [sub.assignmentId, sub]) || []);
 
     return assignments.map(assignment => {
         const submission = submissionsMap.get(assignment.id);
@@ -218,7 +218,7 @@ export default function AssignmentsPage() {
     });
   }, [assignments, submissions]);
 
-  const isLoading = isLoadingAssignments || isLoadingSubmissions;
+  const isLoading = isLoadingAssignments;
 
   return (
     <Card>
@@ -302,5 +302,3 @@ export default function AssignmentsPage() {
     </Card>
   );
 }
-
-    

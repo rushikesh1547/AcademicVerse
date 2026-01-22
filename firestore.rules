@@ -203,7 +203,7 @@ service cloud.firestore {
      * @path /{path=**}/assignmentSubmissions/{submissionId}
      */
     match /{path=**}/assignmentSubmissions/{submissionId} {
-      allow list: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.teacherId);
+      allow list: if isSignedIn() && request.query.where.studentId == request.auth.uid;
     }
 
     /**
