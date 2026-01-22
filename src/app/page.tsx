@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +9,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useAuth } from '@/firebase';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -47,9 +45,6 @@ const registerSchema = z.object({
 });
 
 export default function AuthPage() {
-  const loginImage = PlaceHolderImages.find(
-    (image) => image.id === 'login-background'
-  );
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -180,162 +175,142 @@ export default function AuthPage() {
   );
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 xl:min-h-screen">
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto grid w-[380px] gap-6">
-          <div className="grid gap-2 text-center">
-            <h1 className="text-4xl font-headline font-bold text-primary">
-              AcademicVerse
-            </h1>
-            <p className="text-balance text-muted-foreground">
-              Login or create an account to get started
-            </p>
-          </div>
-
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-2xl">Login</CardTitle>
-                  <CardDescription>
-                    Enter your credentials below. For demonstration, you can register and log in with:
-                    <ul className="list-disc pl-5 mt-1 text-xs">
-                        <li><b>student@example.com</b> (Role: Student)</li>
-                        <li><b>teacher@example.com</b> (Role: Teacher)</li>
-                        <li><b>admin@example.com</b> (Role: Admin)</li>
-                    </ul>
-                    The password for all demo accounts can be "<b>password</b>".
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...loginForm}>
-                    <form
-                      onSubmit={loginForm.handleSubmit(handleLogin)}
-                      className="grid gap-4"
-                    >
-                      <FormField
-                        control={loginForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="student@example.com"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={loginForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full" disabled={isLoading}>
-                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Login
-                      </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="signup">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-2xl">Sign Up</CardTitle>
-                  <CardDescription>
-                    Create a new account to access the platform.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...registerForm}>
-                    <form
-                      onSubmit={registerForm.handleSubmit(handleRegister)}
-                      className="grid gap-4"
-                    >
-                      <FormField
-                        control={registerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="m@example.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Create Account
-                      </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-          <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
-            {isLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <GoogleIcon className="mr-2 h-4 w-4" />
-            )}
-            Google
-          </Button>
+    <div className="w-full flex items-center justify-center min-h-screen">
+      <div className="mx-auto grid w-[380px] gap-6">
+        <div className="grid gap-2 text-center">
+          <h1 className="text-4xl font-headline font-bold text-primary">
+            AcademicVerse
+          </h1>
+          <p className="text-balance text-muted-foreground">
+            Login or create an account to get started
+          </p>
         </div>
-      </div>
-      <div className="hidden bg-muted lg:block">
-        {loginImage && (
-          <Image
-            src={loginImage.imageUrl}
-            alt={loginImage.description}
-            width="1920"
-            height="1080"
-            className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            data-ai-hint={loginImage.imageHint}
-          />
-        )}
+
+        <Tabs defaultValue="login" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">Login</CardTitle>
+                <CardDescription>
+                  Enter your credentials below to log in.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...loginForm}>
+                  <form
+                    onSubmit={loginForm.handleSubmit(handleLogin)}
+                    className="grid gap-4"
+                  >
+                    <FormField
+                      control={loginForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="student@example.com"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                       {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Login
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="signup">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">Sign Up</CardTitle>
+                <CardDescription>
+                  Create a new account to access the platform.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...registerForm}>
+                  <form
+                    onSubmit={registerForm.handleSubmit(handleRegister)}
+                    className="grid gap-4"
+                  >
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="m@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Create Account
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
+          </div>
+        </div>
+        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <GoogleIcon className="mr-2 h-4 w-4" />
+          )}
+          Google
+        </Button>
       </div>
     </div>
   );
