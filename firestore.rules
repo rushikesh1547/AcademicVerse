@@ -189,8 +189,12 @@ service cloud.firestore {
      */
     match /assignments/{assignmentId}/assignmentSubmissions/{submissionId} {
       // Allow read if user is the student who submitted or the teacher who owns the assignment.
-      // This rule is compatible with collection group queries by students.
-      allow get, list: if resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid;
+      allow get: if isSignedIn() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
+      
+      // For list (collection group queries), rules are checked against each document.
+      // Student query has where('studentId', '==', uid)
+      // Teacher query has where('teacherId', '==', uid)
+      allow list: if isSignedIn() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
       
       // Allow create if the user is the student and the teacherId on the submission matches the parent assignment's teacherId.
       allow create: if isSignedIn() 
@@ -255,5 +259,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
