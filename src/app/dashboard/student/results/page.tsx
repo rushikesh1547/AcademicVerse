@@ -86,7 +86,7 @@ export default function ResultsPage() {
                                   </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-2 text-sm text-muted-foreground">
-                                  {result.subjectGrades.split(',').map((grade: string, i: number) => (
+                                  {result.subjectGrades && result.subjectGrades.split(',').map((grade: string, i: number) => (
                                       <p key={i}>{grade.trim()}</p>
                                   ))}
                               </div>

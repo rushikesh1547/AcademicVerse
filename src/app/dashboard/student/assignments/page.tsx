@@ -14,10 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { assignments } from "@/lib/mock-data"
 import { FileText } from "lucide-react"
 
 export default function AssignmentsPage() {
+  const assignments: any[] = [];
   return (
     <Card>
       <CardHeader>

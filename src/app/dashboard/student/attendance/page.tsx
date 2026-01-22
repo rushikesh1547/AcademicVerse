@@ -14,9 +14,9 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { BarChart3, BookOpen } from "lucide-react"
-import { attendanceSummary } from "@/lib/mock-data"
 
 export default function AttendancePage() {
+    const attendanceSummary: any[] = [];
     const totalAttended = attendanceSummary.reduce((acc, item) => acc + item.attended, 0);
     const totalClasses = attendanceSummary.reduce((acc, item) => acc + item.total, 0);
     const overallPercentage = totalClasses > 0 ? (totalAttended / totalClasses) * 100 : 0;

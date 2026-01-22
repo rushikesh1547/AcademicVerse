@@ -41,10 +41,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { subjects } from "@/lib/mock-data";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 
+const subjects: any[] = [];
 const formSchema = z.object({
   examType: z.string({ required_error: "Please select an exam type." }),
   subjectIds: z.array(z.string()).refine((value) => value.some((item) => item), {
@@ -142,7 +142,7 @@ export default function ExamsPage() {
                                 Select the subjects you want to register for.
                                 </FormDescription>
                             </div>
-                            {subjects.map((item) => (
+                            {subjects.length > 0 ? subjects.map((item) => (
                                 <FormField
                                 key={item.id}
                                 control={form.control}
@@ -174,7 +174,7 @@ export default function ExamsPage() {
                                     );
                                 }}
                                 />
-                            ))}
+                            )) : <p className="text-sm text-muted-foreground">No subjects available to select.</p>}
                             <FormMessage />
                             </FormItem>
                         )}

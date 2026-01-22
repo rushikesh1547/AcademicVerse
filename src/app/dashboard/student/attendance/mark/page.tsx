@@ -202,7 +202,7 @@ export default function MarkAttendancePage() {
                 <AlertDescription>
                     You need to complete your face enrollment before you can mark attendance.
                     <Button asChild variant="link" className="p-1 h-auto">
-                        <Link href="/dashboard/profile">Go to Profile Page</Link>
+                        <Link href="/dashboard/student/profile">Go to Profile Page</Link>
                     </Button>
                 </AlertDescription>
             </Alert>

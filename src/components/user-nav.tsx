@@ -31,10 +31,11 @@ export function UserNav() {
     return <Skeleton className="h-9 w-9 rounded-full" />;
   }
 
-  const userDisplayName = userData?.displayName || 'Student';
+  const userDisplayName = userData?.displayName || 'User';
   const userEmail = userData?.email || '';
   const userAvatarUrl = userData?.faceProfileImageUrls?.[0];
-  const fallback = userDisplayName?.charAt(0).toUpperCase() || 'S';
+  const fallback = userDisplayName?.charAt(0).toUpperCase() || 'U';
+  const profileUrl = `/dashboard/${userData?.role}/profile`;
 
   return (
     <DropdownMenu>
@@ -57,12 +58,12 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <Link href="/dashboard/profile" className='w-full'>Profile</Link>
+          <DropdownMenuItem asChild>
+            <Link href={profileUrl} className='w-full'>Profile</Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem asChild>
            <Link href="/" className='w-full'>Log out</Link>
         </DropdownMenuItem>
       </DropdownMenuContent>

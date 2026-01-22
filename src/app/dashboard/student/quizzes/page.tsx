@@ -9,10 +9,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { quizzes } from "@/lib/mock-data";
 import { ClipboardCheck, Clock, HelpCircle } from "lucide-react";
 
 export default function QuizzesPage() {
+  const quizzes: any[] = [];
   return (
     <div className="grid gap-6">
       <Card>
@@ -55,7 +55,7 @@ export default function QuizzesPage() {
               </CardContent>
               <CardFooter>
                 <Button asChild className="w-full" disabled={quiz.status !== 'Upcoming'}>
-                  <Link href={`/dashboard/quizzes/${quiz.id}`}>
+                  <Link href={`/dashboard/student/quizzes/${quiz.id}`}>
                     {quiz.status === 'Upcoming' ? 'Start Quiz' : 'View Results'}
                   </Link>
                 </Button>

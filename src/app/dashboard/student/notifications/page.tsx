@@ -6,9 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { notifications } from "@/lib/mock-data";
 
 export default function NotificationsPage() {
+  const notifications: any[] = [];
   return (
     <Card>
       <CardHeader>

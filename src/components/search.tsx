@@ -7,18 +7,32 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-// This list should be kept in sync with the navigation items in `src/components/dashboard-nav.tsx`
+// This list should be kept in sync with the navigation items in all nav components
 const searchablePages = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/dashboard/profile', label: 'Profile' },
-    { href: '/dashboard/attendance', label: 'Attendance' },
-    { href: '/dashboard/attendance/mark', label: 'Mark Attendance' },
-    { href: '/dashboard/quizzes', label: 'Quizzes' },
-    { href: '/dashboard/assignments', label: 'Assignments' },
-    { href: '/dashboard/resources', label: 'Resources' },
-    { href: '/dashboard/exams', label: 'Exam Forms' },
-    { href: '/dashboard/results', label: 'Results' },
-    { href: '/dashboard/notifications', label: 'Notifications' },
+    // Student
+    { href: '/dashboard/student', label: 'Student Dashboard' },
+    { href: '/dashboard/student/profile', label: 'Profile' },
+    { href: '/dashboard/student/attendance', label: 'Attendance' },
+    { href: '/dashboard/student/attendance/mark', label: 'Mark Attendance' },
+    { href: '/dashboard/student/quizzes', label: 'Quizzes' },
+    { href: '/dashboard/student/assignments', label: 'Assignments' },
+    { href: '/dashboard/student/resources', label: 'Resources' },
+    { href: '/dashboard/student/exams', label: 'Exam Forms' },
+    { href: '/dashboard/student/results', label: 'Results' },
+    { href: '/dashboard/student/notifications', label: 'Notifications' },
+    
+    // Teacher
+    { href: '/dashboard/teacher', label: 'Teacher Dashboard' },
+    { href: '/dashboard/teacher/profile', label: 'Teacher Profile' },
+    { href: '/dashboard/teacher/attendance', label: 'Manage Attendance' },
+    { href: '/dashboard/teacher/assignments', label: 'Manage Assignments' },
+    { href: '/dashboard/teacher/quizzes', label: 'Manage Quizzes' },
+
+    // Admin
+    { href: '/dashboard/admin', label: 'Admin Dashboard' },
+    { href: '/dashboard/admin/users', label: 'User Management' },
+
+    // Other
     { href: '/dashboard/proctoring', label: 'AI Proctoring' },
 ];
 

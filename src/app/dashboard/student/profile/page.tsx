@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { attendanceSummary, assignments } from '@/lib/mock-data';
 import { Download, User, Camera, Loader2, Pencil, CheckCircle } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -47,20 +46,18 @@ export default function ProfilePage() {
     [user, firestore]
   );
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
-
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isSaving, setIsSaving] = useState(false);
-  
-  // State for enrollment dialog
   const [openEnrollDialog, setOpenEnrollDialog] = useState(false);
   const [enrollmentStep, setEnrollmentStep] = useState(0);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
-
-  // State for edit dialog
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [displayName, setDisplayName] = useState('');
+
+  const attendanceSummary: any[] = [];
+  const assignments: any[] = [];
 
   useEffect(() => {
     if (userData?.displayName) {
@@ -68,62 +65,54 @@ export default function ProfilePage() {
     }
   }, [userData?.displayName]);
 
-  // This effect manages the camera stream lifecycle based on the dialog's open state.
-  useEffect(() => {
-    let isCancelled = false;
-
-    async function getCameraStream() {
-        if (openEnrollDialog) {
-            try {
-                const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                if (!isCancelled) {
-                    setStream(newStream);
-                } else {
-                    newStream.getTracks().forEach(track => track.stop());
-                }
-            } catch (err) {
-                if (!isCancelled) {
-                    console.error("Error accessing camera:", err);
-                    toast({
-                        variant: 'destructive',
-                        title: 'Camera Error',
-                        description: 'Could not access camera. Please check permissions and try again.',
-                    });
-                    setOpenEnrollDialog(false);
-                }
-            }
-        }
+  const startStream = useCallback(async () => {
+    if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
     }
+    try {
+        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(newStream);
+    } catch (err) {
+        console.error("Error accessing camera:", err);
+        toast({
+            variant: 'destructive',
+            title: 'Camera Error',
+            description: 'Could not access camera. Please check permissions and try again.',
+        });
+        setOpenEnrollDialog(false);
+    }
+}, [stream, toast]);
 
-    getCameraStream();
+const stopStream = useCallback(() => {
+    if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
+    }
+}, [stream]);
+
+useEffect(() => {
+    if (openEnrollDialog) {
+        startStream();
+    } else {
+        stopStream();
+    }
 
     return () => {
-        isCancelled = true;
+        // Ensure stream is stopped when component unmounts while dialog is open.
         if (stream) {
             stream.getTracks().forEach((track) => track.stop());
-            setStream(null);
         }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openEnrollDialog]);
+}, [openEnrollDialog, startStream, stopStream, stream]);
 
-  // This effect connects the stream to the video element.
+
   useEffect(() => {
     const videoElement = videoRef.current;
-    if (videoElement && stream) {
-        if (videoElement.srcObject !== stream) {
-            videoElement.srcObject = stream;
-            videoElement.play().catch(error => {
-                console.error("Error playing video:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Video Playback Error",
-                    description: "Could not start the camera feed.",
-                });
-            });
-        }
+    if (videoElement && stream && videoElement.srcObject !== stream) {
+        videoElement.srcObject = stream;
+        videoElement.play().catch(console.error);
     }
-  }, [stream, toast]);
+  }, [stream]);
 
 
   const handleCapture = async () => {
@@ -301,9 +290,9 @@ export default function ProfilePage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid md:grid-cols-3 gap-4 items-center">
-                {(userData?.faceProfileImageUrls?.length || 0) > 0 ? userData.faceProfileImageUrls.map((url, index) => (
+                {(userData?.faceProfileImageUrls?.length || 0) > 0 ? userData.faceProfileImageUrls.map((url: string, index: number) => (
                     <div key={index} className="relative aspect-square w-full max-w-[200px] mx-auto bg-muted rounded-md overflow-hidden">
-                       <Image src={url} alt={`Enrolled photo ${index + 1}`} layout="fill" objectFit="cover" />
+                       <Image src={url} alt={`Enrolled photo ${index + 1}`} fill objectFit="cover" />
                        <Badge className="absolute top-2 right-2">{ENROLLMENT_STEPS[index]}</Badge>
                     </div>
                 )) : <p className="text-sm text-muted-foreground md:col-span-3 text-center">No face enrollment photos found.</p>}
@@ -343,24 +332,26 @@ export default function ProfilePage() {
                     ))}
                 </div>
             </div>
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 sm:justify-between">
                 <DialogClose asChild>
                   <Button variant="secondary" onClick={resetEnrollment}>Cancel</Button>
                 </DialogClose>
-                <Button onClick={handleCapture} disabled={!stream || isCapturing}>
-                    {isCapturing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Camera className="mr-2 h-4 w-4" />}
-                    Capture Image
-                </Button>
-                {enrollmentStep < ENROLLMENT_STEPS.length - 1 ? (
-                    <Button onClick={() => setEnrollmentStep(step => step + 1)} disabled={!capturedImages[enrollmentStep]}>
-                       Next Step
+                <div className='flex gap-2'>
+                    <Button onClick={handleCapture} disabled={!stream || isCapturing}>
+                        {isCapturing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Camera className="mr-2 h-4 w-4" />}
+                        Capture Image
                     </Button>
-                ) : (
-                     <Button onClick={handleSaveEnrollment} disabled={isSaving || !capturedImages[enrollmentStep]}>
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                        Complete & Save
-                    </Button>
-                )}
+                    {enrollmentStep < ENROLLMENT_STEPS.length - 1 ? (
+                        <Button onClick={() => setEnrollmentStep(step => step + 1)} disabled={!capturedImages[enrollmentStep]}>
+                        Next Step
+                        </Button>
+                    ) : (
+                        <Button onClick={handleSaveEnrollment} disabled={isSaving || !capturedImages[enrollmentStep]}>
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            Complete & Save
+                        </Button>
+                    )}
+                </div>
             </DialogFooter>
         </DialogContent>
       </Dialog>

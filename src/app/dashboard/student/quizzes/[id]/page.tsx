@@ -8,9 +8,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { quizzes, quizQuestions } from "@/lib/mock-data";
 import { Terminal, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const quizzes: any[] = [];
+const quizQuestions: any[] = [];
 
 export default function QuizTakingPage() {
   const router = useRouter();
@@ -35,7 +37,7 @@ export default function QuizTakingPage() {
         title: "Quiz Submitted",
         description: "Your quiz has been submitted successfully.",
     });
-    router.push("/dashboard/quizzes");
+    router.push("/dashboard/student/quizzes");
   }, [router, toast]);
 
   useEffect(() => {
@@ -92,7 +94,7 @@ export default function QuizTakingPage() {
             <CardDescription>This quiz could not be found or is no longer available.</CardDescription>
         </CardHeader>
         <CardFooter>
-            <Button onClick={() => router.push("/dashboard/quizzes")}>Back to Quizzes</Button>
+            <Button onClick={() => router.push("/dashboard/student/quizzes")}>Back to Quizzes</Button>
         </CardFooter>
       </Card>
     );
@@ -106,7 +108,7 @@ export default function QuizTakingPage() {
           <CardDescription>This quiz currently has no questions.</CardDescription>
         </CardHeader>
         <CardFooter>
-          <Button onClick={() => router.push("/dashboard/quizzes")}>Back to Quizzes</Button>
+          <Button onClick={() => router.push("/dashboard/student/quizzes")}>Back to Quizzes</Button>
         </CardFooter>
       </Card>
     );
@@ -132,7 +134,7 @@ export default function QuizTakingPage() {
               value={answers[currentQuestionIndex]}
               className="mt-4 space-y-2"
             >
-              {currentQuestion?.options.map((option, index) => (
+              {currentQuestion?.options.map((option: string, index: number) => (
                 <div key={index} className="flex items-center space-x-2">
                   <RadioGroupItem value={option} id={`option-${index}`} />
                   <Label htmlFor={`option-${index}`}>{option}</Label>

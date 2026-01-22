@@ -198,14 +198,29 @@
           "type": "string",
           "description": "Unique identifier for the Quiz entity."
         },
-        "configuration": {
+        "teacherId": {
           "type": "string",
-          "description": "The quiz configuration details."
+          "description": "Reference to Teacher who created the quiz."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject of the quiz."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the quiz."
+        },
+        "duration": {
+            "type": "number",
+            "description": "Duration of the quiz in minutes."
         }
       },
       "required": [
         "id",
-        "configuration"
+        "teacherId",
+        "subject",
+        "title",
+        "duration"
       ]
     },
     "QuizQuestion": {
@@ -280,21 +295,33 @@
           "type": "string",
           "description": "Unique identifier for the Assignment entity."
         },
-        "questionText": {
+        "teacherId": {
           "type": "string",
-          "description": "The text or description of the assignment."
+          "description": "Reference to Teacher who created the assignment."
         },
-        "questionImageReferences": {
-          "type": "array",
-          "description": "References (e.g., URLs) to question images.",
-          "items": {
-            "type": "string"
-          }
+        "subject": {
+            "type": "string",
+            "description": "The subject of the assignment."
+        },
+        "title": {
+            "type": "string",
+            "description": "The title of the assignment."
+        },
+        "description": {
+            "type": "string",
+            "description": "The description of the assignment."
+        },
+        "dueDate": {
+            "type": "string",
+            "format": "date"
         }
       },
       "required": [
         "id",
-        "questionText"
+        "teacherId",
+        "subject",
+        "title",
+        "dueDate"
       ]
     },
     "AssignmentSubmission": {
