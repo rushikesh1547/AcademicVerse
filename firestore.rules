@@ -198,8 +198,11 @@ service cloud.firestore {
      * @path /assignments/{assignmentId}/assignmentSubmissions/{submissionId}
      */
     match /assignments/{assignmentId}/assignmentSubmissions/{submissionId} {
+      // Allow teacher to list all submissions for their own assignment.
+      allow list: if isAssignmentOwner(assignmentId);
+      
       // Allow read if user is the student who submitted or the teacher who owns the assignment.
-      allow get: if isSignedIn() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
+      allow get: if isAssignmentOwner(assignmentId) || (isExistingDoc() && resource.data.studentId == request.auth.uid);
       
       // Allow create if the user is the student and the teacherId on the submission matches the parent assignment's teacherId.
       allow create: if isSignedIn() 
