@@ -119,14 +119,22 @@ service cloud.firestore {
     }
 
     /**
-     * @description Attendance interval data is written by the backend. Readable by the relevant student or the session's teacher.
+     * @description Attendance interval data is written by students if session is active. Readable by student or teacher.
      * @path /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId}
      */
     match /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId} {
       allow get: if isSignedIn() && (isSessionOwner(sessionId) || resource.data.studentId == request.auth.uid);
       allow list: if isSessionOwner(sessionId) || isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid && get(/databases/$(database)/documents/attendanceSessions/$(sessionId)).data.status == 'active';
       allow update, delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;
+    }
+    
+    /**
+     * @description Secure rule for Collection Group queries on 'attendanceIntervals'.
+     * @path /{path=**}/attendanceIntervals/{intervalId}
+     */
+    match /{path=**}/attendanceIntervals/{intervalId} {
+      allow list: if isSignedIn() && (request.auth.uid == resource.data.studentId);
     }
 
     /**

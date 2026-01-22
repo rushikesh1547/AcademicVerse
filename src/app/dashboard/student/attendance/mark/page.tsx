@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Camera, CheckCircle, Info, Loader2, XCircle } from 'lucide-react';
+import { Camera, CheckCircle, Info, Loader2, XCircle, Ban } from 'lucide-react';
 import { verifyStudentFace, FaceVerificationOutput } from '@/ai/ai-face-verification';
 import { useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc } from 'firebase/firestore';
@@ -17,6 +18,10 @@ const VERIFICATION_THRESHOLD = 0.8; // 80% confidence required
 
 export default function MarkAttendancePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get('sessionId');
+
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<FaceVerificationOutput | null>(null);
@@ -54,7 +59,6 @@ export default function MarkAttendancePage() {
     getCameraPermission();
     
     return () => {
-      // Use the stream variable from the closure, which is more reliable.
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -62,11 +66,11 @@ export default function MarkAttendancePage() {
   }, [toast]);
 
   const handleMarkAttendance = async () => {
-    if (!videoRef.current || !user || !userData) {
+    if (!videoRef.current || !user || !userData || !sessionId) {
         toast({
             variant: "destructive",
             title: "Error",
-            description: "Camera not ready or user data not loaded.",
+            description: "Camera not ready, user data not loaded, or session is invalid.",
         });
         return;
     }
@@ -106,19 +110,23 @@ export default function MarkAttendancePage() {
         }
 
         if (result.isVerified && result.confidence >= VERIFICATION_THRESHOLD) {
-            toast({
-                title: 'Verification Successful!',
-                description: `Confidence: ${(result.confidence * 100).toFixed(2)}%. Attendance marked.`,
-            });
-            const sessionId = 'live-session-1'; // Hardcoded for demonstration
+            
             const attendanceCollectionRef = collection(firestore, 'attendanceSessions', sessionId, 'attendanceIntervals');
-            addDocumentNonBlocking(attendanceCollectionRef, {
+            await addDocumentNonBlocking(attendanceCollectionRef, {
                 sessionId,
                 studentId: user.uid,
+                studentName: userData.displayName || 'Unknown Student',
                 timestamp: serverTimestamp(),
                 presenceStatus: true,
                 faceRecognitionData: `Verified with ${(result.confidence * 100).toFixed(2)}% confidence`,
             });
+
+            toast({
+                title: 'Verification Successful!',
+                description: `Confidence: ${(result.confidence * 100).toFixed(2)}%. Attendance marked.`,
+            });
+            router.push('/dashboard/student/attendance');
+
         } else {
             let description = result.reason || 'Could not verify your identity.';
             if (result.isVerified && result.confidence < VERIFICATION_THRESHOLD) {
@@ -147,6 +155,9 @@ export default function MarkAttendancePage() {
   const isEnrollmentComplete = userData?.faceProfileImageUrls && userData.faceProfileImageUrls.length >= FACE_ENROLLMENT_MIN_IMAGES;
 
   const getButtonState = () => {
+    if (!sessionId) {
+      return { disabled: true, text: 'Invalid Session' };
+    }
     if (isUserLoading || isUserDataLoading) {
       return { disabled: true, text: 'Loading User Data...' };
     }
@@ -166,6 +177,27 @@ export default function MarkAttendancePage() {
   };
 
   const buttonState = getButtonState();
+
+  if (!sessionId) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                    <Ban className="h-6 w-6" />
+                    Invalid Session
+                </CardTitle>
+                <CardDescription>
+                    No session ID was provided. You can only access this page through a valid link from the attendance dashboard.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild>
+                    <Link href="/dashboard/student/attendance">Go to Attendance Page</Link>
+                </Button>
+            </CardContent>
+        </Card>
+    )
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">

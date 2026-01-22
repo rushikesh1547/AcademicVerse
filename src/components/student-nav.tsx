@@ -13,7 +13,6 @@ import {
   LayoutDashboard,
   Pencil,
   User,
-  Camera,
   ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -33,7 +32,6 @@ const navItems = [
     icon: GraduationCap,
     subItems: [
       { href: '/dashboard/student/attendance', icon: BarChart3, label: 'Attendance' },
-      { href: '/dashboard/student/attendance/mark', icon: Camera, label: 'Mark Attendance' },
       { href: '/dashboard/student/quizzes', icon: ClipboardCheck, label: 'Quizzes' },
       { href: '/dashboard/student/assignments', icon: FileText, label: 'Assignments' },
       { href: '/dashboard/student/resources', icon: BookOpen, label: 'Resources' },
