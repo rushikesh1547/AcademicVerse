@@ -184,14 +184,23 @@ service cloud.firestore {
     }
 
     /**
-     * @description Students can create/update their own submissions. Teachers can list submissions and update them for grading.
+     * @description Manages access to assignment submissions. Compatible with collection group queries.
      * @path /assignments/{assignmentId}/assignmentSubmissions/{submissionId}
      */
     match /assignments/{assignmentId}/assignmentSubmissions/{submissionId} {
-      allow get: if (isExistingDoc() && resource.data.studentId == request.auth.uid) || isAssignmentOwner(assignmentId);
-      allow list: if isAssignmentOwner(assignmentId);
-      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow update: if (isExistingDoc() && resource.data.studentId == request.auth.uid) || isAssignmentOwner(assignmentId);
+      // Allow read if user is the student who submitted or the teacher who owns the assignment.
+      // This rule is compatible with collection group queries by students.
+      allow get, list: if resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid;
+      
+      // Allow create if the user is the student and the teacherId on the submission matches the parent assignment's teacherId.
+      allow create: if isSignedIn() 
+                      && request.resource.data.studentId == request.auth.uid
+                      && request.resource.data.teacherId == get(/databases/$(database)/documents/assignments/$(assignmentId)).data.teacherId;
+
+      // Allow update if user is the student (resubmitting) or the teacher (evaluating).
+      allow update: if isExistingDoc() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
+
+      // Allow delete only by the student who created it.
       allow delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;
     }
 
@@ -246,3 +255,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

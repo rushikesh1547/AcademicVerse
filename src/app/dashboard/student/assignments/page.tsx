@@ -45,6 +45,7 @@ import {
   where,
   serverTimestamp,
   collectionGroup,
+  doc,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -97,6 +98,7 @@ function SubmissionDialog({
       const submissionData = {
         assignmentId: assignment.id,
         studentId: user.uid,
+        teacherId: assignment.teacherId,
         studentName: user.displayName,
         submissionFileUrl,
         submissionTimestamp: serverTimestamp(),
@@ -300,3 +302,5 @@ export default function AssignmentsPage() {
     </Card>
   );
 }
+
+    

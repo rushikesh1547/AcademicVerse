@@ -343,6 +343,10 @@
           "type": "string",
           "description": "Reference to Student. (Relationship: Student 1:N AssignmentSubmission)"
         },
+        "teacherId": {
+          "type": "string",
+          "description": "Denormalized reference to the Teacher who created the assignment."
+        },
         "studentName": {
             "type": "string",
             "description": "The name of the student who submitted the assignment."
@@ -370,6 +374,7 @@
       "required": [
         "assignmentId",
         "studentId",
+        "teacherId",
         "studentName",
         "submissionFileUrl",
         "submissionTimestamp",
@@ -860,3 +865,5 @@
     "reasoning": "The Firestore data structure is designed to support the Academic Management Platform with Continuous AI-Based Attendance, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). Authorization independence is achieved through denormalization. For instance, access to `attendanceIntervals` is determined by denormalized data about the `AttendanceSession` and `Student`.  Specifically, any authorization-relevant data about the `AttendanceSession` (e.g., associated teacher) would be copied into the `attendanceIntervals` documents. This avoids the need for `get()` calls in security rules. To support QAPs, data segregation is employed. Public resources are stored separately from private student data. Membership maps aren't explicitly used here because the ownership model is primarily path-based (e.g., `/users/{userId}/results/{resultId}`), and roles are stored directly in the `users` collection."
   }
 }
+
+    
