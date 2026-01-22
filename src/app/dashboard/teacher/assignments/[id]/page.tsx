@@ -10,8 +10,9 @@ import {
   useMemoFirebase,
   FirestorePermissionError,
   errorEmitter,
+  useUser,
 } from '@/firebase';
-import { doc, collection, query, updateDoc } from 'firebase/firestore';
+import { doc, collection, query, updateDoc, where } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -139,6 +140,7 @@ export default function AssignmentSubmissionsPage() {
   const router = useRouter();
   const id = params.id as string;
   const firestore = useFirestore();
+  const { user } = useUser();
 
   const assignmentRef = useMemoFirebase(
     () => (id ? doc(firestore, 'assignments', id) : null),
@@ -147,8 +149,8 @@ export default function AssignmentSubmissionsPage() {
   const { data: assignment, isLoading: isLoadingAssignment } = useDoc(assignmentRef);
 
   const submissionsRef = useMemoFirebase(
-    () => (id ? query(collection(firestore, 'assignments', id, 'assignmentSubmissions')) : null),
-    [id, firestore]
+    () => (id && user ? query(collection(firestore, 'assignments', id, 'assignmentSubmissions'), where('teacherId', '==', user.uid)) : null),
+    [id, firestore, user]
   );
   const { data: submissions, isLoading: isLoadingSubmissions } = useCollection(submissionsRef);
   
