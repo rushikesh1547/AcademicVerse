@@ -184,17 +184,22 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages access to assignment submissions. Compatible with collection group queries.
+     * @description Secure rule for Collection Group queries on 'assignmentSubmissions'.
+     * @path /{path=**}/assignmentSubmissions/{submissionId}
+     */
+    match /{path=**}/assignmentSubmissions/{submissionId} {
+      // This rule enables collection group queries by students (on their studentId)
+      // and teachers (on their teacherId).
+      allow list: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.teacherId);
+    }
+
+    /**
+     * @description Manages direct access to assignment submissions.
      * @path /assignments/{assignmentId}/assignmentSubmissions/{submissionId}
      */
     match /assignments/{assignmentId}/assignmentSubmissions/{submissionId} {
       // Allow read if user is the student who submitted or the teacher who owns the assignment.
       allow get: if isSignedIn() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
-      
-      // For list (collection group queries), rules are checked against each document.
-      // Student query has where('studentId', '==', uid)
-      // Teacher query has where('teacherId', '==', uid)
-      allow list: if isSignedIn() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
       
       // Allow create if the user is the student and the teacherId on the submission matches the parent assignment's teacherId.
       allow create: if isSignedIn() 
