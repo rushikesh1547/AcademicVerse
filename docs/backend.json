@@ -436,13 +436,13 @@
       "type": "object",
       "description": "Represents an exam registration form.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ExamForm entity."
-        },
         "studentId": {
           "type": "string",
-          "description": "Reference to Student. (Relationship: Student 1:N ExamForm)"
+          "description": "Reference to Student."
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Denormalized student name for teacher view."
         },
         "examType": {
           "type": "string",
@@ -455,17 +455,69 @@
             "type": "string"
           }
         },
+        "feeReceiptUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the uploaded fee receipt."
+        },
         "approvalStatus": {
           "type": "string",
-          "description": "The approval status of the exam form."
+          "description": "The approval status of the exam form.",
+          "enum": [
+            "Pending",
+            "Approved",
+            "Rejected"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of form creation."
         }
       },
       "required": [
-        "id",
         "studentId",
+        "studentName",
         "examType",
         "subjectsSelected",
-        "approvalStatus"
+        "feeReceiptUrl",
+        "approvalStatus",
+        "createdAt"
+      ]
+    },
+    "HallTicket": {
+      "title": "HallTicket",
+      "type": "object",
+      "description": "Represents a student's hall ticket for an exam, uploaded by a teacher.",
+      "properties": {
+        "studentId": {
+          "type": "string"
+        },
+        "studentName": {
+          "type": "string"
+        },
+        "examFormId": {
+          "type": "string"
+        },
+        "examType": {
+          "type": "string"
+        },
+        "hallTicketUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "uploadedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "studentId",
+        "studentName",
+        "examFormId",
+        "examType",
+        "hallTicketUrl",
+        "uploadedAt"
       ]
     },
     "Result": {
@@ -811,11 +863,27 @@
           "schema": {
             "$ref": "#/backend/entities/ExamForm"
           },
-          "description": "Stores exam form information.",
+          "description": "Stores exam form information for student submissions and teacher approvals.",
           "params": [
             {
               "name": "formId",
               "description": "The unique identifier of the exam form."
+            }
+          ]
+        }
+      },
+      {
+        "path": "hallTickets/{hallTicketId}",
+        "definition": {
+          "entityName": "HallTicket",
+          "schema": {
+            "$ref": "#/backend/entities/HallTicket"
+          },
+          "description": "Stores hall tickets uploaded by teachers for students.",
+          "params": [
+            {
+              "name": "hallTicketId",
+              "description": "The unique identifier of the hall ticket."
             }
           ]
         }

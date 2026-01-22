@@ -14,6 +14,7 @@ import {
   Pencil,
   User,
   ShieldAlert,
+  Ticket,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -42,6 +43,7 @@ const navItems = [
     icon: Pencil,
     subItems: [
       { href: '/dashboard/student/exams', icon: Pencil, label: 'Exam Forms' },
+      { href: '/dashboard/student/hall-ticket', icon: Ticket, label: 'Hall Ticket' },
       { href: '/dashboard/student/results', icon: Award, label: 'Results' },
     ],
   },

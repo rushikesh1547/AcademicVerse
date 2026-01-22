@@ -195,7 +195,7 @@ service cloud.firestore {
     match /assignments/{assignmentId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isAssignmentOwner(assignmentId);
     }
 
     /**
@@ -203,8 +203,6 @@ service cloud.firestore {
      * @path /{path=**}/assignmentSubmissions/{submissionId}
      */
     match /{path=**}/assignmentSubmissions/{submissionId} {
-      // This rule enables collection group queries by students (on their studentId)
-      // and teachers (on their teacherId).
       allow list: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.teacherId);
     }
 
@@ -213,21 +211,10 @@ service cloud.firestore {
      * @path /assignments/{assignmentId}/assignmentSubmissions/{submissionId}
      */
     match /assignments/{assignmentId}/assignmentSubmissions/{submissionId} {
-      // Allow teacher to list all submissions for their own assignment.
-      allow list: if isAssignmentOwner(assignmentId);
-      
-      // Allow read if user is the student who submitted or the teacher who owns the assignment.
+      allow list: if isAssignmentOwner(assignmentId) && request.query.where.teacherId == request.auth.uid;
       allow get: if isAssignmentOwner(assignmentId) || (isExistingDoc() && resource.data.studentId == request.auth.uid);
-      
-      // Allow create if the user is the student and the teacherId on the submission matches the parent assignment's teacherId.
-      allow create: if isSignedIn() 
-                      && request.resource.data.studentId == request.auth.uid
-                      && request.resource.data.teacherId == get(/databases/$(database)/documents/assignments/$(assignmentId)).data.teacherId;
-
-      // Allow update if user is the student (resubmitting) or the teacher (evaluating).
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid && request.resource.data.teacherId == get(/databases/$(database)/documents/assignments/$(assignmentId)).data.teacherId;
       allow update: if isExistingDoc() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
-
-      // Allow delete only by the student who created it.
       allow delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;
     }
 
@@ -242,21 +229,36 @@ service cloud.firestore {
     }
 
     // --------------------------------
-    // Student-Owned Document Rules
+    // Examination and Hall Ticket Rules
     // --------------------------------
 
     /**
-     * @description Students can create and manage their own exam forms. Teachers can list them for approval.
+     * @description Manages exam form submissions and approvals.
      * @path /examForms/{formId}
      */
     match /examForms/{formId} {
-      allow get: if (isExistingDoc() && resource.data.studentId == request.auth.uid) || isSignedIn(); // Allow teachers to get too
-      allow list: if isSignedIn();
+      allow get: if (isExistingDoc() && resource.data.studentId == request.auth.uid) || isTeacher();
+      allow list: if (isSignedIn() && request.query.where.studentId == request.auth.uid) || isTeacher();
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow update: if isExistingDoc() && resource.data.studentId == request.auth.uid;
-      allow delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;
+      allow update: if isTeacher() && request.resource.data.keys().hasOnly(['approvalStatus']);
+      allow delete: if isExistingDoc() && resource.data.studentId == request.auth.uid && resource.data.approvalStatus == 'Pending';
     }
 
+    /**
+     * @description Manages hall ticket access and creation.
+     * @path /hallTickets/{hallTicketId}
+     */
+    match /hallTickets/{hallTicketId} {
+      allow get: if isTeacher() || (isExistingDoc() && resource.data.studentId == request.auth.uid);
+      allow list: if isTeacher() || (isSignedIn() && request.query.where.studentId == request.auth.uid);
+      allow create: if isTeacher();
+      allow update, delete: if false;
+    }
+
+    // --------------------------------
+    // Student-Owned Document Rules
+    // --------------------------------
+    
     /**
      * @description Users can only access results within their own user space.
      * @path /users/{userId}/results/{resultId}
