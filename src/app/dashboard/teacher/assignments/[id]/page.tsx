@@ -8,9 +8,11 @@ import {
   useDoc,
   useCollection,
   useMemoFirebase,
-  updateDocumentNonBlocking,
+  useUser,
+  FirestorePermissionError,
+  errorEmitter,
 } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { doc, collection, query, where, updateDoc } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -53,12 +55,13 @@ function EvaluateDialog({ submission } : { submission: any }) {
     const handleSaveMarks = async () => {
         setIsLoading(true);
         const submissionRef = doc(firestore, `assignments/${submission.assignmentId}/assignmentSubmissions`, submission.id);
+        const updatedData = {
+            marks: Number(marks),
+            evaluationStatus: 'Evaluated',
+        };
 
         try {
-            await updateDocumentNonBlocking(submissionRef, {
-                marks: Number(marks),
-                evaluationStatus: 'Evaluated',
-            });
+            await updateDoc(submissionRef, updatedData);
             toast({
                 title: 'Marks Saved!',
                 description: `${submission.studentName}'s assignment has been graded.`,
@@ -66,6 +69,11 @@ function EvaluateDialog({ submission } : { submission: any }) {
             document.getElementById(`close-eval-dialog-${submission.id}`)?.click();
         } catch (error) {
             console.error("Error saving marks:", error);
+             errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: submissionRef.path,
+                operation: 'update',
+                requestResourceData: updatedData,
+            }));
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -132,6 +140,7 @@ export default function AssignmentSubmissionsPage() {
   const router = useRouter();
   const id = params.id as string;
   const firestore = useFirestore();
+  const { user } = useUser();
 
   const assignmentRef = useMemoFirebase(
     () => (id ? doc(firestore, 'assignments', id) : null),
@@ -140,8 +149,8 @@ export default function AssignmentSubmissionsPage() {
   const { data: assignment, isLoading: isLoadingAssignment } = useDoc(assignmentRef);
 
   const submissionsRef = useMemoFirebase(
-    () => (id ? collection(firestore, `assignments/${id}/assignmentSubmissions`) : null),
-    [id, firestore]
+    () => (id && user) ? query(collection(firestore, `assignments/${id}/assignmentSubmissions`), where('teacherId', '==', user.uid)) : null,
+    [id, firestore, user]
   );
   const { data: submissions, isLoading: isLoadingSubmissions } = useCollection(submissionsRef);
   
