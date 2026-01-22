@@ -44,7 +44,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 
-const subjects: any[] = [];
+const subjects = [
+    { id: 'math101', name: 'Mathematics 101' },
+    { id: 'phy101', name: 'Physics for Engineers' },
+    { id: 'chem101', name: 'Introductory Chemistry' },
+    { id: 'cs101', name: 'Introduction to Computer Science' },
+    { id: 'eng101', name: 'English Composition' },
+];
+
 const formSchema = z.object({
   examType: z.string({ required_error: "Please select an exam type." }),
   subjectIds: z.array(z.string()).refine((value) => value.some((item) => item), {
