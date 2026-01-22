@@ -60,7 +60,7 @@ export default function AssignmentsPage() {
                   <TableRow key={assignment.id}>
                     <TableCell className="font-medium">{assignment.title}</TableCell>
                     <TableCell>{assignment.subject}</TableCell>
-                    <TableCell>{assignment.dueDate}</TableCell>
+                    <TableCell>{assignment.dueDate && assignment.dueDate.split('-').reverse().join('-')}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">Pending</Badge>
                     </TableCell>

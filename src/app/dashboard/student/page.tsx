@@ -149,7 +149,7 @@ export default function Dashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {assignment.dueDate}
+                        {assignment.dueDate && assignment.dueDate.split('-').reverse().join('-')}
                       </TableCell>
                     </TableRow>
                   ))

@@ -275,7 +275,7 @@ export default function CreateAssignmentPage() {
                       {assignment.title}
                     </TableCell>
                     <TableCell>{assignment.subject}</TableCell>
-                    <TableCell>{assignment.dueDate}</TableCell>
+                    <TableCell>{assignment.dueDate && assignment.dueDate.split('-').reverse().join('-')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
