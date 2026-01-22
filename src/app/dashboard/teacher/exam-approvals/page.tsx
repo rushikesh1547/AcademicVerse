@@ -18,18 +18,34 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckSquare, Eye, Check, X } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useUser, useDoc } from "@/firebase";
 import { collection, query, where, orderBy, doc } from "firebase/firestore";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function ExamApprovalsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user } = useUser();
+  const router = useRouter();
+
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
+  // Redirect non-teachers
+  useEffect(() => {
+    if (!isUserDataLoading && userData && userData.role !== 'teacher') {
+      router.replace('/dashboard');
+    }
+  }, [userData, isUserDataLoading, router]);
 
   const pendingFormsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'examForms'), where('approvalStatus', '==', 'Pending'), orderBy('createdAt', 'asc')),
-    [firestore]
+    () => (userData?.role === 'teacher') 
+      ? query(collection(firestore, 'examForms'), where('approvalStatus', '==', 'Pending'), orderBy('createdAt', 'asc')) 
+      : null,
+    [firestore, userData]
   );
   const { data: pendingForms, isLoading } = useCollection(pendingFormsQuery);
 
@@ -40,6 +56,15 @@ export default function ExamApprovalsPage() {
         title: `Form ${status}`,
         description: `The exam form has been ${status.toLowerCase()}.`
     })
+  }
+  
+  // Render a loading state while checking role or if not a teacher
+  if (isUserDataLoading || !userData || userData.role !== 'teacher') {
+    return (
+        <div className="flex w-full h-full items-center justify-center p-6">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+        </div>
+    )
   }
 
   return (

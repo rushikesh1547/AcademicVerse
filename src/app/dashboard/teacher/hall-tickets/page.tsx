@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -30,8 +31,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Ticket, Upload } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase, useFirebaseApp, addDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, orderBy, serverTimestamp } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useFirebaseApp, addDocumentNonBlocking, useUser, useDoc } from "@/firebase";
+import { collection, query, where, orderBy, serverTimestamp, doc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from "@/hooks/use-toast";
 
@@ -117,12 +118,33 @@ function UploadHallTicketDialog({ form }: { form: any }) {
 
 export default function HallTicketsPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
+  const router = useRouter();
+
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
+  useEffect(() => {
+    if (!isUserDataLoading && userData && userData.role !== 'teacher') {
+      router.replace('/dashboard');
+    }
+  }, [userData, isUserDataLoading, router]);
 
   const approvedFormsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'examForms'), where('approvalStatus', '==', 'Approved'), orderBy('createdAt', 'desc')),
-    [firestore]
+    () => (userData?.role === 'teacher')
+      ? query(collection(firestore, 'examForms'), where('approvalStatus', '==', 'Approved'), orderBy('createdAt', 'desc'))
+      : null,
+    [firestore, userData]
   );
   const { data: approvedForms, isLoading } = useCollection(approvedFormsQuery);
+
+  if (isUserDataLoading || !userData || userData.role !== 'teacher') {
+    return (
+        <div className="flex w-full h-full items-center justify-center p-6">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+        </div>
+    )
+  }
 
   return (
     <Card>
