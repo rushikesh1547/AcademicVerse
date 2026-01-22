@@ -58,7 +58,7 @@ export default function AuthPage() {
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'student@example.com',
+      email: '',
       password: 'password',
     },
   });
@@ -202,7 +202,13 @@ export default function AuthPage() {
                 <CardHeader>
                   <CardTitle className="text-2xl">Login</CardTitle>
                   <CardDescription>
-                    Welcome back! Please enter your credentials.
+                    Enter your credentials below. For demonstration, you can register and log in with:
+                    <ul className="list-disc pl-5 mt-1 text-xs">
+                        <li><b>student@example.com</b> (Role: Student)</li>
+                        <li><b>teacher@example.com</b> (Role: Teacher)</li>
+                        <li><b>admin@example.com</b> (Role: Admin)</li>
+                    </ul>
+                    The password for all demo accounts can be "<b>password</b>".
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

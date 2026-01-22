@@ -85,11 +85,25 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
           if (!userDocSnap.exists()) {
             // New user! Create their document in Firestore.
+            let role = 'student';
+            let displayName = 'New Student';
+
+            if (firebaseUser.email === 'teacher@example.com') {
+              role = 'teacher';
+              displayName = 'New Teacher';
+            } else if (firebaseUser.email === 'admin@example.com') {
+                role = 'admin';
+                displayName = 'New Admin';
+            } else if (firebaseUser.displayName) {
+                displayName = firebaseUser.displayName;
+            }
+
+
             const newUserDoc = {
               authenticationUid: firebaseUser.uid,
               email: firebaseUser.email,
-              displayName: firebaseUser.displayName || 'New Student',
-              role: 'student', // Default role
+              displayName: displayName,
+              role: role,
               faceProfileImageUrls: [],
             };
             // We use a blocking setDoc here because it's a critical, one-time setup operation.
