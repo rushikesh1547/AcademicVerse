@@ -64,17 +64,24 @@ service cloud.firestore {
       return isSignedIn() && session != null && session.data.teacherId == request.auth.uid;
     }
 
+    /**
+     * Checks if the requesting user has the 'teacher' role.
+     */
+    function isTeacher() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
     // --------------------------------
     // User & Profile Rules
     // --------------------------------
 
     /**
-     * @description Users can create and manage their own user document. Listing users is disallowed.
+     * @description Users can create and manage their own user document. Listing users is allowed for teachers.
      * @path /users/{userId}
      */
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if false;
+      allow list: if isTeacher();
       allow create: if isOwner(userId) && request.resource.data.authenticationUid == userId;
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
@@ -124,8 +131,8 @@ service cloud.firestore {
      */
     match /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId} {
       allow get: if isSignedIn() && (isSessionOwner(sessionId) || resource.data.studentId == request.auth.uid);
-      allow list: if isSessionOwner(sessionId) || isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid && get(/databases/$(database)/documents/attendanceSessions/$(sessionId)).data.status == 'active';
+      allow list: if isSessionOwner(sessionId) || (isSignedIn() && request.query.where.studentId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid && get(/databases/$(database)/documents/attendanceSessions/$(sessionId)).data.status == 'active' || isSessionOwner(sessionId);
       allow update, delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;
     }
     
