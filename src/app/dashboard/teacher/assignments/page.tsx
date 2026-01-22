@@ -31,8 +31,15 @@ import {
   useCollection,
   useMemoFirebase,
   addDocumentNonBlocking,
+  useFirebaseApp,
 } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp } from 'firebase/firestore';
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
 import {
   Table,
   TableBody,
@@ -41,19 +48,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useState } from 'react';
 
 const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
   subject: z.string().min(2, 'Subject is required.'),
   description: z.string().optional(),
   dueDate: z.string().min(1, 'Due date is required.'),
-  fileUrl: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
+  file: z.instanceof(File).optional(),
 });
 
 export default function CreateAssignmentPage() {
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const firebaseApp = useFirebaseApp();
+  const storage = getStorage(firebaseApp);
+  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -62,7 +73,7 @@ export default function CreateAssignmentPage() {
       subject: '',
       description: '',
       dueDate: '',
-      fileUrl: '',
+      file: undefined,
     },
   });
 
@@ -86,17 +97,47 @@ export default function CreateAssignmentPage() {
       return;
     }
 
-    await addDocumentNonBlocking(collection(firestore, 'assignments'), {
-      ...data,
+    setIsUploading(true);
+
+    let fileUrl = '';
+    if (data.file) {
+      const file = data.file;
+      const storageRef = ref(storage, `assignments/${user.uid}/${Date.now()}-${file.name}`);
+
+      try {
+        const snapshot = await uploadBytes(storageRef, file);
+        fileUrl = await getDownloadURL(snapshot.ref);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        toast({
+          variant: "destructive",
+          title: "File Upload Failed",
+          description: "Could not upload the assignment file. Please try again.",
+        });
+        setIsUploading(false);
+        return;
+      }
+    }
+
+    const assignmentData = {
+      title: data.title,
+      subject: data.subject,
+      description: data.description,
+      dueDate: data.dueDate,
+      fileUrl: fileUrl,
       teacherId: user.uid,
-      createdAt: new Date(),
-    });
+      createdAt: serverTimestamp(),
+    };
+
+    addDocumentNonBlocking(collection(firestore, 'assignments'), assignmentData);
 
     toast({
       title: 'Assignment Created',
       description: `${data.title} has been successfully created.`,
     });
+    
     form.reset();
+    setIsUploading(false);
   }
 
   return (
@@ -171,18 +212,21 @@ export default function CreateAssignmentPage() {
               />
               <FormField
                 control={form.control}
-                name="fileUrl"
-                render={({ field }) => (
+                name="file"
+                render={({ field: { onChange, ...fieldProps } }) => (
                   <FormItem>
-                    <FormLabel>File URL (Optional)</FormLabel>
+                    <FormLabel>Assignment File (Optional)</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="https://example.com/assignment.pdf"
-                        {...field}
+                        {...fieldProps}
+                        type="file"
+                        onChange={(event) =>
+                          onChange(event.target.files && event.target.files[0])
+                        }
                       />
                     </FormControl>
                     <FormDescription>
-                      Link to an assignment file (e.g., PDF, Google Doc).
+                      Upload a PDF, DOCX, or other document.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -192,9 +236,9 @@ export default function CreateAssignmentPage() {
             <CardFooter>
               <Button
                 type="submit"
-                disabled={isUserLoading || form.formState.isSubmitting}
+                disabled={isUserLoading || form.formState.isSubmitting || isUploading}
               >
-                {form.formState.isSubmitting && (
+                {(form.formState.isSubmitting || isUploading) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Create Assignment
