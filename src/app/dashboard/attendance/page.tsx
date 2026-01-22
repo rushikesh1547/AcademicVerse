@@ -19,7 +19,7 @@ import { attendanceSummary } from "@/lib/mock-data"
 export default function AttendancePage() {
     const totalAttended = attendanceSummary.reduce((acc, item) => acc + item.attended, 0);
     const totalClasses = attendanceSummary.reduce((acc, item) => acc + item.total, 0);
-    const overallPercentage = (totalAttended / totalClasses) * 100;
+    const overallPercentage = totalClasses > 0 ? (totalAttended / totalClasses) * 100 : 0;
 
   return (
     <div className="grid gap-6">
@@ -70,17 +70,25 @@ export default function AttendancePage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {attendanceSummary.map((item, index) => {
-                            const percentage = (item.attended / item.total) * 100;
-                            return (
-                                <TableRow key={index}>
-                                    <TableCell className="font-medium">{item.subject}</TableCell>
-                                    <TableCell>{item.attended}</TableCell>
-                                    <TableCell>{item.total}</TableCell>
-                                    <TableCell className="text-right">{percentage.toFixed(1)}%</TableCell>
-                                </TableRow>
-                            );
-                        })}
+                        {attendanceSummary.length > 0 ? (
+                            attendanceSummary.map((item, index) => {
+                                const percentage = item.total > 0 ? (item.attended / item.total) * 100 : 0;
+                                return (
+                                    <TableRow key={index}>
+                                        <TableCell className="font-medium">{item.subject}</TableCell>
+                                        <TableCell>{item.attended}</TableCell>
+                                        <TableCell>{item.total}</TableCell>
+                                        <TableCell className="text-right">{percentage.toFixed(1)}%</TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                    No attendance records found.
+                                </TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </CardContent>

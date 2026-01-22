@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { notifications } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
 
 export default function NotificationsPage() {
   return (
@@ -22,21 +21,27 @@ export default function NotificationsPage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
-        {notifications.map((notification, index) => (
-          <div
-            key={index}
-            className="grid items-start gap-4 grid-cols-[25px_1fr] "
-          >
-            <span className="flex h-2 w-2 translate-y-1 rounded-full bg-primary" />
-            <div className="grid gap-1">
-              <p className="text-sm font-medium">{notification.title}</p>
-              <p className="text-sm text-muted-foreground">
-                {notification.description}
-              </p>
-              <p className="text-xs text-muted-foreground">{notification.time}</p>
+        {notifications.length > 0 ? (
+          notifications.map((notification, index) => (
+            <div
+              key={index}
+              className="grid items-start gap-4 grid-cols-[25px_1fr] "
+            >
+              <span className="flex h-2 w-2 translate-y-1 rounded-full bg-primary" />
+              <div className="grid gap-1">
+                <p className="text-sm font-medium">{notification.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  {notification.description}
+                </p>
+                <p className="text-xs text-muted-foreground">{notification.time}</p>
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="text-center text-muted-foreground p-8">
+            You have no notifications.
           </div>
-        ))}
+        )}
       </CardContent>
     </Card>
   );

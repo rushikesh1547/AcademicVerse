@@ -39,6 +39,9 @@ const chartConfig = {
 };
 
 export default function Dashboard() {
+  const upcomingQuizzes = quizzes.filter(q => q.status === 'Upcoming').length;
+  const unreadNotifications = notifications.filter(n => !n.read).length;
+
   return (
     <>
       <div className="flex items-center">
@@ -53,9 +56,9 @@ export default function Dashboard() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">91.2%</div>
+            <div className="text-2xl font-bold">0.0%</div>
             <p className="text-xs text-muted-foreground">
-              +2.1% from last month
+              No attendance data yet
             </p>
           </CardContent>
         </Card>
@@ -67,9 +70,9 @@ export default function Dashboard() {
             <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
+            <div className="text-2xl font-bold">{upcomingQuizzes}</div>
             <p className="text-xs text-muted-foreground">
-              Next one in 3 days
+              No upcoming quizzes scheduled
             </p>
           </CardContent>
         </Card>
@@ -79,8 +82,8 @@ export default function Dashboard() {
             <Bell className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">2 unread</p>
+            <div className="text-2xl font-bold">{notifications.length}</div>
+            <p className="text-xs text-muted-foreground">{unreadNotifications} unread</p>
           </CardContent>
         </Card>
         <Card>
@@ -89,7 +92,7 @@ export default function Dashboard() {
             <span className="text-lg font-bold">GPA</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3.8</div>
+            <div className="text-2xl font-bold">N/A</div>
             <p className="text-xs text-muted-foreground">
               On a 4.0 scale
             </p>
@@ -127,24 +130,32 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments.slice(0, 5).map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>
-                      <div className="font-medium">{assignment.title}</div>
-                    </TableCell>
-                    <TableCell className="hidden xl:table-column">
-                      {assignment.subject}
-                    </TableCell>
-                    <TableCell className="hidden xl:table-column">
-                      <Badge className="text-xs" variant={assignment.status === 'Submitted' ? 'default' : 'secondary'}>
-                        {assignment.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {assignment.dueDate}
+                {assignments.length > 0 ? (
+                  assignments.slice(0, 5).map((assignment) => (
+                    <TableRow key={assignment.id}>
+                      <TableCell>
+                        <div className="font-medium">{assignment.title}</div>
+                      </TableCell>
+                      <TableCell className="hidden xl:table-column">
+                        {assignment.subject}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-column">
+                        <Badge className="text-xs" variant={assignment.status === 'Submitted' ? 'default' : 'secondary'}>
+                          {assignment.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {assignment.dueDate}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      No recent assignments.
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -156,30 +167,36 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[200px] w-full">
-              <BarChart accessibilityLayer data={attendanceChartData}>
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => `${value}%`}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
-                <Bar
-                  dataKey="attendance"
-                  fill="var(--color-attendance)"
-                  radius={8}
-                />
-              </BarChart>
+              {attendanceChartData.length > 0 ? (
+                <BarChart accessibilityLayer data={attendanceChartData}>
+                  <XAxis
+                    dataKey="month"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => value.slice(0, 3)}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent hideLabel />}
+                  />
+                  <Bar
+                    dataKey="attendance"
+                    fill="var(--color-attendance)"
+                    radius={8}
+                  />
+                </BarChart>
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-muted-foreground">No attendance data to display.</p>
+                </div>
+              )}
             </ChartContainer>
           </CardContent>
         </Card>

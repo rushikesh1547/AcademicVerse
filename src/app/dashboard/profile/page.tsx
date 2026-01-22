@@ -70,70 +70,58 @@ export default function ProfilePage() {
 
   // This effect manages the camera stream lifecycle based on the dialog's open state.
   useEffect(() => {
-    // If the dialog is not open, we don't need the camera.
-    if (!openEnrollDialog) {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        setStream(null);
-      }
-      return;
-    }
-
-    // A flag to prevent state updates if the component unmounts while waiting for the camera.
     let isCancelled = false;
 
-    const getCameraStream = async () => {
-      try {
-        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (!isCancelled) {
-          setStream(newStream);
-        } else {
-          // If the component unmounted while we were getting permission, clean up the new stream.
-          newStream.getTracks().forEach(track => track.stop());
+    async function getCameraStream() {
+        if (openEnrollDialog) {
+            try {
+                const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                if (!isCancelled) {
+                    setStream(newStream);
+                } else {
+                    newStream.getTracks().forEach(track => track.stop());
+                }
+            } catch (err) {
+                if (!isCancelled) {
+                    console.error("Error accessing camera:", err);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Camera Error',
+                        description: 'Could not access camera. Please check permissions and try again.',
+                    });
+                    setOpenEnrollDialog(false);
+                }
+            }
         }
-      } catch (err) {
-        if (!isCancelled) {
-          console.error("Error accessing camera:", err);
-          toast({
-            variant: 'destructive',
-            title: 'Camera Error',
-            description: 'Could not access camera. Please check permissions and try again.',
-          });
-          // Close the dialog on error.
-          setOpenEnrollDialog(false);
-        }
-      }
-    };
+    }
 
     getCameraStream();
 
-    // Cleanup function: runs when the dialog is closed or the component unmounts.
     return () => {
-      isCancelled = true;
-      // This check is important because the stream might be from a previous render
-      if (videoRef.current && videoRef.current.srcObject) {
-        const currentStream = videoRef.current.srcObject as MediaStream;
-        currentStream.getTracks().forEach((track) => track.stop());
-      }
-      setStream(null);
+        isCancelled = true;
+        if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+            setStream(null);
+        }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openEnrollDialog]);
 
-  // This effect connects the stream to the video element whenever the stream is available.
+  // This effect connects the stream to the video element.
   useEffect(() => {
     const videoElement = videoRef.current;
     if (videoElement && stream) {
-      videoElement.srcObject = stream;
-      // The `playsInline` prop on the video element is important for iOS.
-      videoElement.play().catch(error => {
-        console.error("Error playing video:", error);
-        toast({
-          variant: "destructive",
-          title: "Video Playback Error",
-          description: "Could not start the camera feed.",
-        });
-      });
+        if (videoElement.srcObject !== stream) {
+            videoElement.srcObject = stream;
+            videoElement.play().catch(error => {
+                console.error("Error playing video:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Video Playback Error",
+                    description: "Could not start the camera feed.",
+                });
+            });
+        }
     }
   }, [stream, toast]);
 
@@ -355,7 +343,7 @@ export default function ProfilePage() {
                     ))}
                 </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
                 <DialogClose asChild>
                   <Button variant="secondary" onClick={resetEnrollment}>Cancel</Button>
                 </DialogClose>
@@ -392,15 +380,23 @@ export default function ProfilePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {attendanceSummary.map((item, index) => {
-                  const percentage = (item.attended / item.total) * 100;
-                  return (
-                    <TableRow key={index}>
-                      <TableCell>{item.subject}</TableCell>
-                      <TableCell className="text-right">{percentage.toFixed(1)}%</TableCell>
-                    </TableRow>
-                  );
-                })}
+                {attendanceSummary.length > 0 ? (
+                  attendanceSummary.map((item, index) => {
+                    const percentage = (item.attended / item.total) * 100;
+                    return (
+                      <TableRow key={index}>
+                        <TableCell>{item.subject}</TableCell>
+                        <TableCell className="text-right">{percentage.toFixed(1)}%</TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={2} className="h-24 text-center">
+                      No attendance records found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -418,12 +414,20 @@ export default function ProfilePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments.slice(0, 5).map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.title}</TableCell>
-                    <TableCell className="text-right">{item.status}</TableCell>
+                {assignments.length > 0 ? (
+                  assignments.slice(0, 5).map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.title}</TableCell>
+                      <TableCell className="text-right">{item.status}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={2} className="h-24 text-center">
+                      No assignments found.
+                    </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>

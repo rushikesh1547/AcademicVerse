@@ -80,12 +80,36 @@ export default function QuizTakingPage() {
   };
 
   const currentQuestion = quizQuestions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / quizQuestions.length) * 100;
+  const progress = quizQuestions.length > 0 ? ((currentQuestionIndex + 1) / quizQuestions.length) * 100 : 0;
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
 
   if (!quiz) {
-    return <div>Quiz not found</div>;
+    return (
+      <Card>
+        <CardHeader>
+            <CardTitle>Quiz Not Found</CardTitle>
+            <CardDescription>This quiz could not be found or is no longer available.</CardDescription>
+        </CardHeader>
+        <CardFooter>
+            <Button onClick={() => router.push("/dashboard/quizzes")}>Back to Quizzes</Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+  
+  if (quizQuestions.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{quiz.title}</CardTitle>
+          <CardDescription>This quiz currently has no questions.</CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button onClick={() => router.push("/dashboard/quizzes")}>Back to Quizzes</Button>
+        </CardFooter>
+      </Card>
+    );
   }
 
   return (

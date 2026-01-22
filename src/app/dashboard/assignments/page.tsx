@@ -41,27 +41,35 @@ export default function AssignmentsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assignments.map((assignment) => (
-              <TableRow key={assignment.id}>
-                <TableCell className="font-medium">{assignment.title}</TableCell>
-                <TableCell>{assignment.subject}</TableCell>
-                <TableCell>{assignment.dueDate}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      assignment.status === "Submitted"
-                        ? "default"
-                        : assignment.status === "Pending"
-                        ? "secondary"
-                        : "destructive"
-                    }
-                  >
-                    {assignment.status}
-                  </Badge>
+            {assignments.length > 0 ? (
+              assignments.map((assignment) => (
+                <TableRow key={assignment.id}>
+                  <TableCell className="font-medium">{assignment.title}</TableCell>
+                  <TableCell>{assignment.subject}</TableCell>
+                  <TableCell>{assignment.dueDate}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        assignment.status === "Submitted"
+                          ? "default"
+                          : assignment.status === "Pending"
+                          ? "secondary"
+                          : "destructive"
+                      }
+                    >
+                      {assignment.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{assignment.grade || "N/A"}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center">
+                  No assignments found.
                 </TableCell>
-                <TableCell className="text-right">{assignment.grade || "N/A"}</TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </CardContent>
