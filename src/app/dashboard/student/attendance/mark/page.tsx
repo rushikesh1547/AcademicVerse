@@ -31,9 +31,10 @@ export default function MarkAttendancePage() {
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
   useEffect(() => {
+    let stream: MediaStream | null = null;
     const getCameraPermission = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
         setHasCameraPermission(true);
 
         if (videoRef.current) {
@@ -53,10 +54,10 @@ export default function MarkAttendancePage() {
     getCameraPermission();
     
     return () => {
-        if (videoRef.current && videoRef.current.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
-        }
+      // Use the stream variable from the closure, which is more reliable.
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
     }
   }, [toast]);
 

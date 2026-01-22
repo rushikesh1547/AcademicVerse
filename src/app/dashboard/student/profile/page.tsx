@@ -66,51 +66,47 @@ export default function ProfilePage() {
   }, [userData?.displayName]);
 
   const startStream = useCallback(async () => {
-    if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-    }
     try {
-        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        setStream(newStream);
+      const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setStream(newStream);
     } catch (err) {
-        console.error("Error accessing camera:", err);
-        toast({
-            variant: 'destructive',
-            title: 'Camera Error',
-            description: 'Could not access camera. Please check permissions and try again.',
-        });
-        setOpenEnrollDialog(false);
+      console.error("Error accessing camera:", err);
+      toast({
+        variant: 'destructive',
+        title: 'Camera Error',
+        description: 'Could not access camera. Please check permissions and try again.',
+      });
+      setOpenEnrollDialog(false);
     }
-}, [stream, toast]);
+  }, [toast, setOpenEnrollDialog]);
 
-const stopStream = useCallback(() => {
-    if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        setStream(null);
-    }
-}, [stream]);
+  const stopStream = useCallback(() => {
+    setStream(currentStream => {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+      return null;
+    });
+  }, []);
 
-useEffect(() => {
+  useEffect(() => {
     if (openEnrollDialog) {
-        startStream();
+      startStream();
     } else {
-        stopStream();
+      stopStream();
     }
-
-    return () => {
-        // Ensure stream is stopped when component unmounts while dialog is open.
-        if (stream) {
-            stream.getTracks().forEach((track) => track.stop());
-        }
-    };
-}, [openEnrollDialog, startStream, stopStream, stream]);
-
+    return () => stopStream();
+  }, [openEnrollDialog, startStream, stopStream]);
 
   useEffect(() => {
     const videoElement = videoRef.current;
-    if (videoElement && stream && videoElement.srcObject !== stream) {
+    if (videoElement && stream) {
+      if (videoElement.srcObject !== stream) {
         videoElement.srcObject = stream;
-        videoElement.play().catch(console.error);
+        videoElement.play().catch(e => console.error("Video play failed", e));
+      }
+    } else if (videoElement) {
+        videoElement.srcObject = null;
     }
   }, [stream]);
 

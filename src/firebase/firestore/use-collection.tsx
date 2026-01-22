@@ -68,6 +68,29 @@ export function useCollection<T = any>(
       setError(null);
       return;
     }
+  
+    // 🔒 SAFETY: prevent Firestore root access
+    let isRoot = false;
+  
+    if ('path' in memoizedTargetRefOrQuery) {
+      // CollectionReference case
+      isRoot = memoizedTargetRefOrQuery.path === '';
+    } else {
+      // Query case
+      const queryPath = (memoizedTargetRefOrQuery as InternalQuery)
+        ._query.path.canonicalString();
+      isRoot = queryPath === '';
+    }
+  
+    if (isRoot) {
+      setData(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+  
+    
+  
 
     setIsLoading(true);
     setError(null);
