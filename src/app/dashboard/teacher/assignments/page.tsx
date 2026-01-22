@@ -31,10 +31,11 @@ import {
   useFirestore,
   useCollection,
   useMemoFirebase,
-  addDocumentNonBlocking,
   useFirebaseApp,
+  errorEmitter,
+  FirestorePermissionError,
 } from '@/firebase';
-import { collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
 import {
   getStorage,
   ref,
@@ -49,7 +50,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
@@ -65,7 +66,8 @@ export default function CreateAssignmentPage() {
   const firestore = useFirestore();
   const firebaseApp = useFirebaseApp();
   const storage = getStorage(firebaseApp);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -98,51 +100,74 @@ export default function CreateAssignmentPage() {
       return;
     }
 
-    setIsUploading(true);
-
-    let fileUrl = '';
-    if (data.file) {
-      const file = data.file;
-      const storageRef = ref(storage, `assignments/${user.uid}/${Date.now()}-${file.name}`);
-
-      try {
-        const snapshot = await uploadBytes(storageRef, file);
-        fileUrl = await getDownloadURL(snapshot.ref);
-      } catch (error) {
-        console.error("Error uploading file:", error);
-        toast({
-          variant: "destructive",
-          title: "File Upload Failed",
-          description: "Could not upload the assignment file. Please try again.",
-        });
-        setIsUploading(false);
-        return;
-      }
-    }
+    setIsSubmitting(true);
 
     const assignmentData = {
       title: data.title,
       subject: data.subject,
-      description: data.description,
+      description: data.description || '',
       dueDate: data.dueDate,
-      fileUrl: fileUrl,
+      fileUrl: '',
       teacherId: user.uid,
       createdAt: serverTimestamp(),
     };
 
-    addDocumentNonBlocking(collection(firestore, 'assignments'), assignmentData);
+    try {
+      const assignmentsCollection = collection(firestore, 'assignments');
+      const docRef = await addDoc(assignmentsCollection, assignmentData);
 
-    toast({
-      title: 'Assignment Created',
-      description: `${data.title} has been successfully created.`,
-    });
-    
-    // Clear file input manually
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
-    
-    form.reset();
-    setIsUploading(false);
+      toast({
+        title: 'Assignment Created',
+        description: `${data.title} has been added to the list.`,
+      });
+
+      if (data.file) {
+        toast({
+          title: 'File Uploading...',
+          description: `Uploading file for "${data.title}".`,
+        });
+
+        const file = data.file;
+        const storageRef = ref(storage, `assignments/${user.uid}/${docRef.id}-${file.name}`);
+
+        uploadBytes(storageRef, file)
+          .then((snapshot) => {
+            getDownloadURL(snapshot.ref).then((downloadURL) => {
+              updateDoc(docRef, { fileUrl: downloadURL });
+            });
+          })
+          .catch((error) => {
+            console.error('Error uploading file:', error);
+            toast({
+              variant: 'destructive',
+              title: 'File Upload Failed',
+              description: `Could not upload the file for ${data.title}.`,
+            });
+          });
+      }
+
+      form.reset();
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Creation Failed',
+        description: 'There was an error creating the assignment.',
+      });
+      errorEmitter.emit(
+        'permission-error',
+        new FirestorePermissionError({
+          path: 'assignments',
+          operation: 'create',
+          requestResourceData: assignmentData,
+        })
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -224,7 +249,8 @@ export default function CreateAssignmentPage() {
                     <FormControl>
                       <Input
                         {...fieldProps}
-                        value={undefined} // controlled by react-hook-form
+                        ref={fileInputRef}
+                        value={undefined}
                         type="file"
                         onChange={(event) =>
                           onChange(event.target.files && event.target.files[0])
@@ -242,9 +268,9 @@ export default function CreateAssignmentPage() {
             <CardFooter>
               <Button
                 type="submit"
-                disabled={isUserLoading || form.formState.isSubmitting || isUploading}
+                disabled={isUserLoading || isSubmitting}
               >
-                {(form.formState.isSubmitting || isUploading) && (
+                {isSubmitting && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Create Assignment
