@@ -25,9 +25,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, User, Camera, Loader2, Pencil, CheckCircle } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { Download, User, Camera, Loader2, Pencil, CheckCircle, Upload } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +40,7 @@ const ENROLLMENT_STEPS = ['Front View', 'Left Profile', 'Right Profile'];
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const firebaseApp = useFirebaseApp();
   const { toast } = useToast();
 
   const userDocRef = useMemoFirebase(
@@ -55,6 +57,9 @@ export default function ProfilePage() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [openUploadPhotoDialog, setOpenUploadPhotoDialog] = useState(false);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const attendanceSummary: any[] = [];
   const assignments: any[] = [];
@@ -166,7 +171,7 @@ export default function ProfilePage() {
 
     toast({
         title: 'Face Enrollment Complete!',
-        description: 'Your new profile photos have been saved.',
+        description: 'Your new verification photos have been saved.',
     });
     setIsSaving(false);
     resetEnrollment();
@@ -187,6 +192,40 @@ export default function ProfilePage() {
     });
     setOpenEditDialog(false);
   }
+
+  const handleProfilePhotoUpload = async () => {
+    if (!profilePhotoFile || !user || !userDocRef) {
+      toast({ title: "No file selected", variant: "destructive" });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    const storage = getStorage(firebaseApp);
+    const storageRef = ref(storage, `profile-photos/${user.uid}`);
+
+    try {
+      const snapshot = await uploadBytes(storageRef, profilePhotoFile);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      updateDocumentNonBlocking(userDocRef, { profileImageUrl: downloadURL });
+
+      toast({
+        title: "Profile Photo Updated!",
+        description: "Your new photo is now live.",
+      });
+      setOpenUploadPhotoDialog(false);
+      setProfilePhotoFile(null);
+    } catch (error) {
+      console.error("Error uploading profile photo:", error);
+      toast({
+        title: "Upload Failed",
+        description: "There was an error uploading your photo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
   
   const isLoading = isUserLoading || isUserDataLoading;
   const isEnrolled = userData?.faceProfileImageUrls && userData.faceProfileImageUrls.length >= ENROLLMENT_STEPS.length;
@@ -215,12 +254,13 @@ export default function ProfilePage() {
           ) : (
             <div className="flex flex-col md:flex-row items-start gap-6">
               <Avatar className="h-24 w-24">
-                {userData?.faceProfileImageUrls?.[0] && (
-                  <AvatarImage src={userData.faceProfileImageUrls[0]} alt="User Avatar" />
+                {userData?.profileImageUrl ? (
+                  <AvatarImage src={userData.profileImageUrl} alt="User Avatar" />
+                ) : (
+                  <AvatarFallback className="text-3xl">
+                    {userData?.displayName?.charAt(0) || 'S'}
+                  </AvatarFallback>
                 )}
-                <AvatarFallback className="text-3xl">
-                  {userData?.displayName?.charAt(0) || 'S'}
-                </AvatarFallback>
               </Avatar>
               <div className="grid gap-1.5 flex-1">
                 <h2 className="text-2xl font-bold font-headline">{userData?.displayName}</h2>
@@ -232,11 +272,15 @@ export default function ProfilePage() {
                     </Badge>
                 </div>
               </div>
-              <div className="flex w-full md:w-auto gap-2 mt-4 md:mt-0">
+              <div className="flex w-full md:w-auto flex-wrap gap-2 mt-4 md:mt-0">
                   <Button variant="outline" onClick={() => setOpenEditDialog(true)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit Profile
                   </Button>
+                   <Button variant="outline" onClick={() => setOpenUploadPhotoDialog(true)}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Photo
+                    </Button>
                   <Button variant="outline" size="sm" className="ml-auto" disabled>
                     <Download className="mr-2 h-4 w-4" />
                     Download Grade Card
@@ -275,6 +319,29 @@ export default function ProfilePage() {
               </DialogFooter>
           </DialogContent>
       </Dialog>
+
+      {/* New Photo Upload Dialog */}
+      <Dialog open={openUploadPhotoDialog} onOpenChange={setOpenUploadPhotoDialog}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Upload Profile Photo</DialogTitle>
+                  <DialogDescription>
+                      Choose a new photo for your profile. This will be visible across the platform.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                  <Label htmlFor="photo">New Photo</Label>
+                  <Input id="photo" type="file" onChange={(e) => setProfilePhotoFile(e.target.files?.[0] || null)} accept="image/png, image/jpeg" />
+              </div>
+              <DialogFooter>
+                  <Button variant="secondary" onClick={() => setOpenUploadPhotoDialog(false)}>Cancel</Button>
+                  <Button onClick={handleProfilePhotoUpload} disabled={isUploadingPhoto}>
+                      {isUploadingPhoto && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Save Photo
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
       
       {/* Face Enrollment Card & Dialog */}
       <Dialog open={openEnrollDialog} onOpenChange={setOpenEnrollDialog}>
@@ -282,7 +349,7 @@ export default function ProfilePage() {
             <CardHeader>
                 <CardTitle>Face Recognition Enrollment</CardTitle>
                 <CardDescription>
-                    To use the smart attendance system, you must enroll your face by providing a few photos.
+                    To use the smart attendance system, you must enroll your face by providing a few photos for verification.
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid md:grid-cols-3 gap-4 items-center">
@@ -423,3 +490,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

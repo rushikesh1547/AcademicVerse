@@ -33,7 +33,7 @@ export function UserNav() {
 
   const userDisplayName = userData?.displayName || 'User';
   const userEmail = userData?.email || '';
-  const userAvatarUrl = userData?.faceProfileImageUrls?.[0];
+  const userAvatarUrl = userData?.profileImageUrl;
   const fallback = userDisplayName?.charAt(0).toUpperCase() || 'U';
   const profileUrl = `/dashboard/${userData?.role}/profile`;
 
@@ -70,3 +70,5 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
+
+    
