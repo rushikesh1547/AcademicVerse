@@ -29,6 +29,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 
@@ -41,7 +42,17 @@ const registerSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   password: z
     .string()
-    .min(6, { message: 'Password must be at least 6 characters long.' }),
+    .min(8, { message: 'Password must be at least 8 characters long.' })
+    .regex(/[A-Z]/, {
+      message: 'Password must contain at least one uppercase letter.',
+    })
+    .regex(/[a-z]/, {
+      message: 'Password must contain at least one lowercase letter.',
+    })
+    .regex(/[0-9]/, { message: 'Password must contain at least one number.' })
+    .regex(/[^A-Za-z0-9]/, {
+      message: 'Password must contain at least one special character.',
+    }),
 });
 
 export default function AuthPage() {
@@ -54,7 +65,7 @@ export default function AuthPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
-      password: 'password',
+      password: '',
     },
   });
 
@@ -196,7 +207,7 @@ export default function AuthPage() {
               <CardHeader>
                 <CardTitle className="text-2xl">Login</CardTitle>
                 <CardDescription>
-                  Enter your credentials below to log in.
+                  Enter your credentials to log in.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -213,8 +224,9 @@ export default function AuthPage() {
                           <FormLabel>Email</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="student@example.com"
+                              placeholder="email@example.com"
                               {...field}
+                              autoComplete="email"
                             />
                           </FormControl>
                           <FormMessage />
@@ -228,7 +240,11 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input
+                              type="password"
+                              {...field}
+                              autoComplete="current-password"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -248,7 +264,7 @@ export default function AuthPage() {
               <CardHeader>
                 <CardTitle className="text-2xl">Sign Up</CardTitle>
                 <CardDescription>
-                  Create a new account to access the platform.
+                  Enter your credentials to create an account.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -264,7 +280,11 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="m@example.com" {...field} />
+                            <Input
+                              placeholder="email@example.com"
+                              {...field}
+                              autoComplete="email"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -277,8 +297,15 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input
+                              type="password"
+                              {...field}
+                              autoComplete="new-password"
+                            />
                           </FormControl>
+                           <FormDescription>
+                            Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
