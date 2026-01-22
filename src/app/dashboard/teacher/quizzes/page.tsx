@@ -27,15 +27,23 @@ import {
   useUser,
   useFirestore,
   addDocumentNonBlocking,
+  useCollection,
+  useMemoFirebase,
 } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
   subject: z.string().min(2, 'Subject is required.'),
-  duration: z.coerce
-    .number()
-    .min(1, 'Duration must be at least 1 minute.'),
+  duration: z.coerce.number().min(1, 'Duration must be at least 1 minute.'),
 });
 
 export default function CreateQuizPage() {
@@ -51,6 +59,16 @@ export default function CreateQuizPage() {
       duration: 10,
     },
   });
+
+  const quizzesQuery = useMemoFirebase(
+    () =>
+      user
+        ? query(collection(firestore, 'quizzes'), where('teacherId', '==', user.uid))
+        : null,
+    [user, firestore]
+  );
+  const { data: quizzes, isLoading: isLoadingQuizzes } =
+    useCollection(quizzesQuery);
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     if (!user) {
@@ -152,9 +170,34 @@ export default function CreateQuizPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Feature to display and manage existing quizzes is coming soon.
-          </p>
+          {isLoadingQuizzes ? (
+            <div className="flex items-center justify-center p-6">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : quizzes && quizzes.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead className="text-right">Duration (Mins)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {quizzes.map((quiz) => (
+                  <TableRow key={quiz.id}>
+                    <TableCell className="font-medium">{quiz.title}</TableCell>
+                    <TableCell>{quiz.subject}</TableCell>
+                    <TableCell className="text-right">{quiz.duration}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              You have not created any quizzes yet.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

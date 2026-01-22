@@ -1,3 +1,5 @@
+'use client';
+
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -14,10 +16,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { FileText } from "lucide-react"
+import { FileText, Loader2 } from "lucide-react"
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function AssignmentsPage() {
-  const assignments: any[] = [];
+  const firestore = useFirestore();
+  const assignmentsQuery = useMemoFirebase(() => collection(firestore, 'assignments'), [firestore]);
+  const { data: assignments, isLoading } = useCollection(assignmentsQuery);
+
   return (
     <Card>
       <CardHeader>
@@ -30,48 +39,50 @@ export default function AssignmentsPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Grade</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {assignments.length > 0 ? (
-              assignments.map((assignment) => (
-                <TableRow key={assignment.id}>
-                  <TableCell className="font-medium">{assignment.title}</TableCell>
-                  <TableCell>{assignment.subject}</TableCell>
-                  <TableCell>{assignment.dueDate}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        assignment.status === "Submitted"
-                          ? "default"
-                          : assignment.status === "Pending"
-                          ? "secondary"
-                          : "destructive"
-                      }
-                    >
-                      {assignment.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">{assignment.grade || "N/A"}</TableCell>
-                </TableRow>
-              ))
-            ) : (
+        {isLoading ? (
+            <div className="flex items-center justify-center h-24">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        ) : (
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  No assignments found.
-                </TableCell>
+                <TableHead>Title</TableHead>
+                <TableHead>Subject</TableHead>
+                <TableHead>Due Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {assignments && assignments.length > 0 ? (
+                assignments.map((assignment) => (
+                  <TableRow key={assignment.id}>
+                    <TableCell className="font-medium">{assignment.title}</TableCell>
+                    <TableCell>{assignment.subject}</TableCell>
+                    <TableCell>{assignment.dueDate}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">Pending</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <Button asChild variant="outline" size="sm" disabled={!assignment.fileUrl}>
+                            <Link href={assignment.fileUrl || '#'} target="_blank">
+                                View Assignment
+                            </Link>
+                        </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    No assignments found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   )

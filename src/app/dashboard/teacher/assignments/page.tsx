@@ -32,13 +32,22 @@ import {
   useMemoFirebase,
   addDocumentNonBlocking,
 } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
   subject: z.string().min(2, 'Subject is required.'),
   description: z.string().optional(),
   dueDate: z.string().min(1, 'Due date is required.'),
+  fileUrl: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
 });
 
 export default function CreateAssignmentPage() {
@@ -53,12 +62,16 @@ export default function CreateAssignmentPage() {
       subject: '',
       description: '',
       dueDate: '',
+      fileUrl: '',
     },
   });
 
   const assignmentsQuery = useMemoFirebase(
-    () => collection(firestore, 'assignments'),
-    [firestore]
+    () =>
+      user
+        ? query(collection(firestore, 'assignments'), where('teacherId', '==', user.uid))
+        : null,
+    [user, firestore]
   );
   const { data: assignments, isLoading: isLoadingAssignments } =
     useCollection(assignmentsQuery);
@@ -156,6 +169,25 @@ export default function CreateAssignmentPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="fileUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>File URL (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://example.com/assignment.pdf"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Link to an assignment file (e.g., PDF, Google Doc).
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
             <CardFooter>
               <Button
@@ -173,14 +205,42 @@ export default function CreateAssignmentPage() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Existing Assignments</CardTitle>
-          <CardDescription>A list of assignments you have created.</CardDescription>
+          <CardTitle>Created Assignments</CardTitle>
+          <CardDescription>
+            A list of assignments you have created.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* List existing assignments here */}
-          <p className="text-sm text-muted-foreground">
-            Feature to display assignments is coming soon.
-          </p>
+          {isLoadingAssignments ? (
+            <div className="flex items-center justify-center p-6">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : assignments && assignments.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Due Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assignments.map((assignment) => (
+                  <TableRow key={assignment.id}>
+                    <TableCell className="font-medium">
+                      {assignment.title}
+                    </TableCell>
+                    <TableCell>{assignment.subject}</TableCell>
+                    <TableCell>{assignment.dueDate}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              You have not created any assignments yet.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

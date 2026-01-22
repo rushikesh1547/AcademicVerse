@@ -314,6 +314,11 @@
         "dueDate": {
             "type": "string",
             "format": "date"
+        },
+        "fileUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL to the assignment file (e.g., PDF, DOCX)."
         }
       },
       "required": [
