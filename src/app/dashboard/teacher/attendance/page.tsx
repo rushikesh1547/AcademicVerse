@@ -18,8 +18,9 @@ import {
   addDocumentNonBlocking,
   useCollection,
   useMemoFirebase,
+  updateDocumentNonBlocking,
 } from '@/firebase';
-import { collection, query, where, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, addDoc, doc } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -130,6 +131,7 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
                 status: 'active', // Session is active immediately
                 startTime: serverTimestamp(),
                 endTime: null,
+                presentStudentIds: [], // Initialize with an empty array
             };
             const docRef = await addDoc(collection(firestore, 'attendanceSessions'), sessionData);
             newSessionId = docRef.id;
@@ -187,6 +189,11 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
                         });
                     }
                 }
+                
+                // Update the session document with the array of present students
+                const sessionDocRef = doc(firestore, 'attendanceSessions', newSessionId);
+                updateDocumentNonBlocking(sessionDocRef, { presentStudentIds: result.identifiedStudentIds });
+                
                 setLastScanResults(identifiedNames);
                 toast({
                     title: "Scan Complete",

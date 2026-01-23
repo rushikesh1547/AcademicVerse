@@ -124,6 +124,13 @@
           "type": "string",
           "description": "The end time of the attendance session.",
           "format": "date-time"
+        },
+        "presentStudentIds": {
+            "type": "array",
+            "description": "Array of student UIDs who were marked present in this session.",
+            "items": {
+                "type": "string"
+            }
         }
       },
       "required": [

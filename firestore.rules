@@ -131,16 +131,8 @@ service cloud.firestore {
      */
     match /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId} {
       allow get: if isSignedIn() && (isSessionOwner(sessionId) || (isExistingDoc() && resource.data.studentId == request.auth.uid));
-      allow list: if isSessionOwner(sessionId) || (isSignedIn() && request.query.where.studentId == request.auth.uid);
+      allow list: if isSessionOwner(sessionId);
       allow create, update, delete: if isSessionOwner(sessionId);
-    }
-    
-    /**
-     * @description Secure rule for Collection Group queries on 'attendanceIntervals'. Students can only query for their own records.
-     * @path /{path=**}/attendanceIntervals/{intervalId}
-     */
-    match /{path=**}/attendanceIntervals/{intervalId} {
-      allow list: if isSignedIn() && (request.query.where.studentId == request.auth.uid);
     }
 
     /**

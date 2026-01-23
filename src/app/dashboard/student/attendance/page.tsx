@@ -29,7 +29,7 @@ import {
   useUser,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, query, where, collectionGroup, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 
 type Session = {
@@ -49,38 +49,30 @@ export default function AttendancePage() {
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection(sessionsQuery);
 
-  const myIntervalsQuery = useMemoFirebase(
-    () =>
-      user
-        ? query(collectionGroup(firestore, 'attendanceIntervals'), where('studentId', '==', user.uid))
-        : null,
-    [user, firestore]
-  );
-  const { data: myIntervals, isLoading: isLoadingIntervals } = useCollection(myIntervalsQuery);
-
   const { attendanceBySubject, subjects } = useMemo(() => {
     const attendanceBySubject = new Map<string, Session[]>();
-    if (!sessions) {
+    if (!sessions || !user) {
       return { attendanceBySubject, subjects: [] };
     }
-
-    const presentSessionIds = new Set(myIntervals?.map(interval => interval.sessionId) || []);
 
     sessions.forEach(session => {
       const subject = session.title?.split(' - ')[0] || 'General';
       if (!attendanceBySubject.has(subject)) {
         attendanceBySubject.set(subject, []);
       }
+      
+      const isPresent = Array.isArray(session.presentStudentIds) && session.presentStudentIds.includes(user.uid);
+
       attendanceBySubject.get(subject)?.push({
         ...(session as any),
-        isPresent: presentSessionIds.has(session.id),
+        isPresent,
       });
     });
 
     return { attendanceBySubject, subjects: Array.from(attendanceBySubject.keys()) };
-  }, [sessions, myIntervals]);
+  }, [sessions, user]);
 
-  const isLoading = isLoadingSessions || isLoadingIntervals;
+  const isLoading = isLoadingSessions;
 
   return (
     <div className="grid gap-6">
