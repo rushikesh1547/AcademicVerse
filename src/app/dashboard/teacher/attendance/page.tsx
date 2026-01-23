@@ -67,9 +67,6 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
         try {
             const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
             setStream(newStream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = newStream;
-            }
         } catch (err) {
             console.error("Error accessing camera:", err);
             toast({
@@ -81,11 +78,13 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
     }, [toast]);
 
     const stopStream = useCallback(() => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
-        }
-    }, [stream]);
+        setStream(currentStream => {
+            if (currentStream) {
+              currentStream.getTracks().forEach(track => track.stop());
+            }
+            return null;
+        });
+    }, []);
 
     useEffect(() => {
         if (isOpen) {
@@ -95,6 +94,18 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
         }
         return () => stopStream();
     }, [isOpen, startStream, stopStream]);
+
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        if (videoElement && stream) {
+            if (videoElement.srcObject !== stream) {
+                videoElement.srcObject = stream;
+                videoElement.play().catch(e => console.error("Video play failed", e));
+            }
+        } else if (videoElement) {
+            videoElement.srcObject = null;
+        }
+    }, [stream]);
 
     const handleScanAndStartSession = async () => {
         if (!videoRef.current || !students || !user) {
