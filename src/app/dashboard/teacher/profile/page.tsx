@@ -133,7 +133,7 @@ export default function TeacherProfilePage() {
               </Avatar>
               <div className="grid gap-1.5 flex-1">
                 <h2 className="text-2xl font-bold font-headline">{userData?.displayName}</h2>
-                <p className="text-muted-foreground">Role: {userData?.role}</p>
+                <p className="text-muted-foreground">Role: Teacher</p>
                 <p className="text-muted-foreground">Email: {userData?.email}</p>
               </div>
               <div className="flex w-full md:w-auto flex-wrap gap-2 mt-4 md:mt-0">

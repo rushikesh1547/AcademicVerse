@@ -264,7 +264,7 @@ export default function ProfilePage() {
               </Avatar>
               <div className="grid gap-1.5 flex-1">
                 <h2 className="text-2xl font-bold font-headline">{userData?.displayName}</h2>
-                <p className="text-muted-foreground">Role: {userData?.role}</p>
+                <p className="text-muted-foreground">Role: Student</p>
                 <p className="text-muted-foreground">Email: {userData?.email}</p>
                 <div className="flex items-center gap-2 mt-1">
                     <Badge variant={isEnrolled ? "default" : "secondary"}>

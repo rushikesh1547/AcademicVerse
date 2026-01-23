@@ -15,7 +15,7 @@ import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from './ui/skeleton';
 
-export function UserNav() {
+export function UserNav({ role }: { role: 'student' | 'teacher' | 'admin' }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
@@ -35,7 +35,7 @@ export function UserNav() {
   const userEmail = userData?.email || '';
   const userAvatarUrl = userData?.profileImageUrl;
   const fallback = userDisplayName?.charAt(0).toUpperCase() || 'U';
-  const profileUrl = `/dashboard/${userData?.role}/profile`;
+  const profileUrl = `/dashboard/${role}/profile`;
 
   return (
     <DropdownMenu>
@@ -56,12 +56,18 @@ export function UserNav() {
             </p>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href={profileUrl} className='w-full'>Profile</Link>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
+        
+        {role !== 'admin' && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link href={profileUrl} className='w-full'>Profile</Link>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </>
+        )}
+        
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
            <Link href="/" className='w-full'>Log out</Link>
@@ -70,5 +76,3 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
-
-    
