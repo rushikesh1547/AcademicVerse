@@ -41,13 +41,6 @@ export default function SessionDetailsPage() {
   );
   const { data: session, isLoading: isLoadingSession } = useDoc(sessionRef);
 
-  // Fetch attendance records for this session
-  const intervalsRef = useMemoFirebase(
-    () => (sessionId ? collection(firestore, 'attendanceSessions', sessionId, 'attendanceIntervals') : null),
-    [sessionId, firestore]
-  );
-  const { data: intervals, isLoading: isLoadingIntervals } = useCollection(intervalsRef);
-
   // Fetch all students
   const studentsQuery = useMemoFirebase(
       () => query(collection(firestore, 'users'), where('role', '==', 'student')),
@@ -55,20 +48,20 @@ export default function SessionDetailsPage() {
   );
   const { data: allStudents, isLoading: isLoadingStudents } = useCollection(studentsQuery);
 
-  // Combine student list with attendance data
+  // Combine student list with attendance data from the session document
   const attendanceList = useMemo(() => {
-    if (!allStudents || !intervals) return [];
+    if (!allStudents || !session) return [];
     
-    const presentStudentIds = new Set(intervals.map(interval => interval.studentId));
+    // Use the presentStudentIds array from the session document as the source of truth
+    const presentStudentIds = new Set(session.presentStudentIds || []);
 
     return allStudents.map(student => ({
       ...student,
       isPresent: presentStudentIds.has(student.id),
-      timestamp: intervals.find(i => i.studentId === student.id)?.timestamp,
     }));
-  }, [allStudents, intervals]);
+  }, [allStudents, session]);
   
-  const isLoading = isLoadingSession || isLoadingIntervals || isLoadingStudents;
+  const isLoading = isLoadingSession || isLoadingStudents;
 
   return (
     <div className="space-y-6">
@@ -81,7 +74,7 @@ export default function SessionDetailsPage() {
         <CardHeader>
             <CardTitle>{isLoadingSession ? <Loader2 className="animate-spin"/> : session?.title}</CardTitle>
             <CardDescription>
-            {isLoadingSession ? 'Loading session details...' : `Status: ${session?.status}`}
+            {isLoadingSession ? 'Loading session details...' : `Status: ${session?.status} | Date: ${session?.startTime?.toDate().toLocaleDateString()}`}
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,22 +91,18 @@ export default function SessionDetailsPage() {
                 <TableHeader>
                     <TableRow>
                     <TableHead>Student Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Marked At</TableHead>
+                    <TableHead className="text-right">Status</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {attendanceList.map((student) => (
                     <TableRow key={student.id}>
                         <TableCell className="font-medium">{student.displayName}</TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                             <Badge variant={student.isPresent ? 'default' : 'destructive'} className='gap-1.5 pl-1.5'>
                                 {student.isPresent ? <CheckCircle className='h-4 w-4'/> : <CircleOff className='h-4 w-4'/>}
                                 {student.isPresent ? 'Present' : 'Absent'}
                             </Badge>
-                        </TableCell>
-                        <TableCell>
-                            {student.timestamp ? student.timestamp.toDate().toLocaleString() : 'N/A'}
                         </TableCell>
                     </TableRow>
                     ))}

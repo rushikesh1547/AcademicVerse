@@ -56,6 +56,7 @@ export default function AttendancePage() {
     }
 
     sessions.forEach(session => {
+      // This logic is a bit brittle but should work for "Subject Name - Details"
       const subject = session.title?.split(' - ')[0] || 'General';
       if (!attendanceBySubject.has(subject)) {
         attendanceBySubject.set(subject, []);
@@ -69,7 +70,8 @@ export default function AttendancePage() {
       });
     });
 
-    return { attendanceBySubject, subjects: Array.from(attendanceBySubject.keys()) };
+    const sortedSubjects = Array.from(attendanceBySubject.keys()).sort();
+    return { attendanceBySubject, subjects: sortedSubjects };
   }, [sessions, user]);
 
   const isLoading = isLoadingSessions;
@@ -93,7 +95,7 @@ export default function AttendancePage() {
              </div>
           ) : subjects.length > 0 ? (
             <Tabs defaultValue={subjects[0]} className="w-full">
-              <TabsList>
+              <TabsList className="flex-wrap h-auto justify-start">
                 {subjects.map(subject => (
                   <TabsTrigger key={subject} value={subject}>{subject}</TabsTrigger>
                 ))}
