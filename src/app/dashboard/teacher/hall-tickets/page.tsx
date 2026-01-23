@@ -125,7 +125,7 @@ export default function HallTicketsPage() {
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
   useEffect(() => {
-    if (!isUserDataLoading && userData && userData.role !== 'teacher') {
+    if (!isUserDataLoading && (!userData || userData.role !== 'teacher')) {
       router.replace('/dashboard');
     }
   }, [userData, isUserDataLoading, router]);
@@ -136,7 +136,7 @@ export default function HallTicketsPage() {
       : null,
     [firestore, userData]
   );
-  const { data: approvedForms, isLoading } = useCollection(approvedFormsQuery);
+  const { data: approvedForms, isLoading: isLoadingForms } = useCollection(approvedFormsQuery);
 
   if (isUserDataLoading || !userData || userData.role !== 'teacher') {
     return (
@@ -158,7 +158,7 @@ export default function HallTicketsPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {isLoadingForms ? (
           <div className="flex items-center justify-center p-6">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>

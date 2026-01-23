@@ -34,9 +34,8 @@ export default function ExamApprovalsPage() {
   const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
-  // Redirect non-teachers
   useEffect(() => {
-    if (!isUserDataLoading && userData && userData.role !== 'teacher') {
+    if (!isUserDataLoading && (!userData || userData.role !== 'teacher')) {
       router.replace('/dashboard');
     }
   }, [userData, isUserDataLoading, router]);
@@ -47,7 +46,7 @@ export default function ExamApprovalsPage() {
       : null,
     [firestore, userData]
   );
-  const { data: pendingForms, isLoading } = useCollection(pendingFormsQuery);
+  const { data: pendingForms, isLoading: isLoadingForms } = useCollection(pendingFormsQuery);
 
   const handleUpdateStatus = (formId: string, status: 'Approved' | 'Rejected') => {
     const formRef = doc(firestore, 'examForms', formId);
@@ -58,7 +57,6 @@ export default function ExamApprovalsPage() {
     })
   }
   
-  // Render a loading state while checking role or if not a teacher
   if (isUserDataLoading || !userData || userData.role !== 'teacher') {
     return (
         <div className="flex w-full h-full items-center justify-center p-6">
@@ -79,7 +77,7 @@ export default function ExamApprovalsPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {isLoadingForms ? (
           <div className="flex items-center justify-center p-6">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
