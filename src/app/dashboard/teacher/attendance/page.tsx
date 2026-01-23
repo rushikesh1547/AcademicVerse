@@ -1,27 +1,16 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, BarChart3, Play, Square, Eye, Camera } from 'lucide-react';
+import { Loader2, Camera, Eye, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   useUser,
@@ -29,9 +18,8 @@ import {
   addDocumentNonBlocking,
   useCollection,
   useMemoFirebase,
-  updateDocumentNonBlocking,
 } from '@/firebase';
-import { collection, query, where, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, addDoc } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -41,29 +29,30 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter,
-    DialogTrigger,
-  } from '@/components/ui/dialog';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { scanClassroom } from '@/ai/ai-classroom-scanner';
-import { useRef, useState, useCallback } from 'react';
 
-const formSchema = z.object({
-  title: z.string().min(3, 'Title must be at least 3 characters.'),
-});
+const subjects = [
+    'Computer Science - Lecture 1',
+    'Data Structures - Lab',
+    'Algorithms - Tutorial',
+    'Operating Systems - Lecture',
+    'Database Systems - Lab'
+];
 
-
-// New Component for Camera Attendance
-function CameraAttendanceDialog({ session }: { session: any }) {
+function StartAttendanceScanDialog({ subject, user }: { subject: string, user: any }) {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [isOpen, setIsOpen] = useState(false);
     const [stream, setStream] = useState<MediaStream | null>(null);
-    const [isScanning, setIsScanning] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [lastScanResults, setLastScanResults] = useState<string[] | null>(null);
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -98,25 +87,64 @@ function CameraAttendanceDialog({ session }: { session: any }) {
         }
     }, [stream]);
 
-    const handleScan = async () => {
-        if (!videoRef.current || !students || students.length === 0) {
+    useEffect(() => {
+        if (isOpen) {
+            startStream();
+        } else {
+            stopStream();
+        }
+        return () => stopStream();
+    }, [isOpen, startStream, stopStream]);
+
+    const handleScanAndStartSession = async () => {
+        if (!videoRef.current || !students || !user) {
             toast({
                 variant: "destructive",
                 title: "Scan Error",
-                description: "Camera is not ready or there are no students to scan for.",
+                description: "Camera is not ready or student data could not be loaded.",
             });
             return;
         }
 
-        setIsScanning(true);
+        setIsProcessing(true);
         setLastScanResults(null);
 
+        // 1. Create the session document first
+        const sessionTitle = `${subject} - ${new Date().toLocaleDateString()}`;
+        let newSessionId = '';
+        try {
+            const sessionData = {
+                title: sessionTitle,
+                teacherId: user.uid,
+                status: 'active', // Session is active immediately
+                startTime: serverTimestamp(),
+                endTime: null,
+            };
+            const docRef = await addDoc(collection(firestore, 'attendanceSessions'), sessionData);
+            newSessionId = docRef.id;
+            toast({
+                title: 'Session Started',
+                description: `Session "${sessionTitle}" is now active. Scanning for students...`,
+            });
+        } catch (e) {
+            console.error("Error creating session:", e);
+            toast({
+                variant: "destructive",
+                title: "Session Error",
+                description: "Could not create a new attendance session.",
+            });
+            setIsProcessing(false);
+            return;
+        }
+
+        // 2. Capture image
         const canvas = document.createElement('canvas');
         canvas.width = videoRef.current.videoWidth;
         canvas.height = videoRef.current.videoHeight;
         canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
         const classroomPhotoDataUri = canvas.toDataURL('image/jpeg');
 
+        // 3. Scan and Mark Attendance
         try {
             const studentDataForAI = students.map(s => ({
                 id: s.id,
@@ -131,14 +159,15 @@ function CameraAttendanceDialog({ session }: { session: any }) {
 
             if (result.identifiedStudentIds.length > 0) {
                 const identifiedNames: string[] = [];
-                const attendanceCollectionRef = collection(firestore, 'attendanceSessions', session.id, 'attendanceIntervals');
+                const attendanceCollectionRef = collection(firestore, 'attendanceSessions', newSessionId, 'attendanceIntervals');
                 
                 for (const studentId of result.identifiedStudentIds) {
                     const student = students.find(s => s.id === studentId);
                     if (student) {
                         identifiedNames.push(student.displayName);
+                        // Using non-blocking adds for speed
                         addDocumentNonBlocking(attendanceCollectionRef, {
-                            sessionId: session.id,
+                            sessionId: newSessionId,
                             studentId: student.id,
                             studentName: student.displayName,
                             timestamp: serverTimestamp(),
@@ -168,58 +197,51 @@ function CameraAttendanceDialog({ session }: { session: any }) {
                 description: "An unexpected error occurred during the classroom scan.",
             });
         } finally {
-            setIsScanning(false);
+            setIsProcessing(false);
+            setIsOpen(false);
         }
     };
     
     return (
-        <Dialog onOpenChange={(open) => {
-            if (open) startStream();
-            else stopStream();
-        }}>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button>
                     <Camera className="mr-2 h-4 w-4" />
-                    Mark with Camera
+                    Start Attendance
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Mark Attendance for: {session.title}</DialogTitle>
+                    <DialogTitle>Start Attendance Scan for: {subject}</DialogTitle>
                     <DialogDescription>
-                        Position the camera to see your students and click "Scan Classroom". The AI will detect and mark them present.
+                        Position the camera to see your students, then click the scan button. A new session will be created automatically.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
                         <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
                         {!stream && <Loader2 className="h-8 w-8 animate-spin text-muted-foreground absolute" />}
-                        {isScanning && (
+                        {isProcessing && (
                             <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
                                 <Loader2 className="h-12 w-12 animate-spin" />
-                                <p className="mt-2">Scanning classroom...</p>
+                                <p className="mt-2">Processing...</p>
                             </div>
                         )}
                     </div>
                     <div>
-                        <h3 className="font-semibold mb-2">Last Scan Results</h3>
-                        {lastScanResults ? (
-                            lastScanResults.length > 0 ? (
-                                <ul className="list-disc pl-5 text-sm space-y-1">
-                                    {lastScanResults.map((name, i) => <li key={i}>{name}</li>)}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">No students were identified.</p>
-                            )
-                        ) : (
-                            <p className="text-sm text-muted-foreground">Results will appear here after a scan.</p>
-                        )}
+                        <h3 className="font-semibold mb-2">Instructions</h3>
+                        <ol className="list-decimal list-inside text-sm space-y-1 text-muted-foreground">
+                            <li>Ensure good lighting in the classroom.</li>
+                            <li>Ask students to face the camera.</li>
+                            <li>Try to capture as many students as possible.</li>
+                            <li>Click the scan button to log attendance.</li>
+                        </ol>
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleScan} disabled={isScanning || isLoadingStudents || !stream}>
-                        {(isScanning || isLoadingStudents) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isLoadingStudents ? 'Loading students...' : 'Scan Classroom'}
+                    <Button onClick={handleScanAndStartSession} disabled={isProcessing || isLoadingStudents || !stream}>
+                        {(isProcessing || isLoadingStudents) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isLoadingStudents ? 'Loading Students...' : 'Scan Classroom & Start Session'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -227,20 +249,11 @@ function CameraAttendanceDialog({ session }: { session: any }) {
     );
 }
 
-
 export default function TeacherAttendancePage() {
-  const { toast } = useToast();
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
+    const { user } = useUser();
+    const firestore = useFirestore();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: '',
-    },
-  });
-
-  const sessionsQuery = useMemoFirebase(
+    const sessionsQuery = useMemoFirebase(
     () =>
       user
         ? query(collection(firestore, 'attendanceSessions'), where('teacherId', '==', user.uid))
@@ -249,148 +262,78 @@ export default function TeacherAttendancePage() {
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection(sessionsQuery);
 
-  async function onSubmit(data: z.infer<typeof formSchema>) {
-    if (!user) {
-      toast({
-        variant: 'destructive',
-        title: 'Not Logged In',
-        description: 'You must be logged in to create a session.',
-      });
-      return;
-    }
-
-    const sessionData = {
-      title: data.title,
-      teacherId: user.uid,
-      status: 'pending',
-    };
-
-    addDocumentNonBlocking(collection(firestore, 'attendanceSessions'), sessionData);
-
-    toast({
-      title: 'Session Created',
-      description: `${data.title} has been created and is ready to start.`,
-    });
-    form.reset();
-  }
-
-  const handleUpdateStatus = (sessionId: string, status: 'active' | 'ended') => {
-    const sessionRef = doc(firestore, 'attendanceSessions', sessionId);
-    const updateData: any = { status };
-    if (status === 'active') {
-        updateData.startTime = serverTimestamp();
-    } else if (status === 'ended') {
-        updateData.endTime = serverTimestamp();
-    }
-    updateDocumentNonBlocking(sessionRef, updateData);
-    toast({
-        title: `Session ${status === 'active' ? 'Started' : 'Ended'}`,
-        description: `The session has been successfully updated.`,
-    });
-  }
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-6 w-6" />
-            Create Attendance Session
-          </CardTitle>
-          <CardDescription>
-            Create a new session that students can join to mark their attendance.
-          </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Session Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Computer Science - Lecture 1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter>
-              <Button
-                type="submit"
-                disabled={isUserLoading || form.formState.isSubmitting}
-              >
-                {form.formState.isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Create Session
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Sessions</CardTitle>
-          <CardDescription>
-            A list of attendance sessions you have created.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingSessions ? (
-            <div className="flex items-center justify-center p-6">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : sessions && sessions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sessions.map((session) => (
-                  <TableRow key={session.id}>
-                    <TableCell className="font-medium">{session.title}</TableCell>
-                    <TableCell>
-                        <Badge variant={session.status === 'active' ? 'default' : session.status === 'ended' ? 'destructive' : 'secondary'}>
-                            {session.status}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                        {session.status === 'active' && <CameraAttendanceDialog session={session} />}
-                        {session.status !== 'active' && session.status !== 'ended' && (
-                            <Button variant="outline" size="sm" onClick={() => handleUpdateStatus(session.id, 'active')}>
-                                <Play className="mr-2 h-4 w-4" /> Start
-                            </Button>
-                        )}
-                        {session.status === 'active' && (
-                             <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus(session.id, 'ended')}>
-                                <Square className="mr-2 h-4 w-4" /> End
-                            </Button>
-                        )}
-                        <Button asChild variant="secondary" size="sm">
-                            <Link href={`/dashboard/teacher/attendance/${session.id}`}>
-                                <Eye className="mr-2 h-4 w-4" /> View
-                            </Link>
-                        </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              You have not created any sessions yet.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+    return (
+        <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Camera className="h-6 w-6" />
+                        Start New Attendance Session
+                    </CardTitle>
+                    <CardDescription>
+                        Select a subject to start a new attendance scan. A new session will be created automatically.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-2">
+                    {subjects.map(subject => (
+                        <div key={subject} className="flex items-center justify-between p-2 rounded-md border">
+                            <p className="font-medium">{subject}</p>
+                            <StartAttendanceScanDialog subject={subject} user={user} />
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-2'>
+                    <BarChart3 className="h-6 w-6" />
+                    Past Sessions
+                  </CardTitle>
+                  <CardDescription>
+                    A list of attendance sessions you have created.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingSessions ? (
+                    <div className="flex items-center justify-center p-6">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : sessions && sessions.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sessions.map((session) => (
+                          <TableRow key={session.id}>
+                            <TableCell className="font-medium">{session.title}</TableCell>
+                            <TableCell>
+                                <Badge variant={session.status === 'active' ? 'default' : session.status === 'ended' ? 'destructive' : 'secondary'}>
+                                    {session.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                                <Button asChild variant="secondary" size="sm">
+                                    <Link href={`/dashboard/teacher/attendance/${session.id}`}>
+                                        <Eye className="mr-2 h-4 w-4" /> View
+                                    </Link>
+                                </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-6">
+                      You have not created any sessions yet.
+                    </p>
+                  )}
+                </CardContent>
+            </Card>
+        </div>
+    );
 }
