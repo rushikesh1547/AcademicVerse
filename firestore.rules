@@ -116,32 +116,31 @@ service cloud.firestore {
     // --------------------------------
 
     /**
-     * @description Attendance session info is readable by any signed-in user.
+     * @description Attendance session info is readable by any signed-in user. Only the creating teacher can manage sessions.
      * @path /attendanceSessions/{sessionId}
      */
     match /attendanceSessions/{sessionId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isSessionOwner(sessionId);
     }
 
     /**
-     * @description Attendance interval data is written by students if session is active. Readable by student or teacher.
+     * @description Attendance intervals can only be created/managed by the session owner (teacher). Students can read their own records.
      * @path /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId}
      */
     match /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId} {
-      allow get: if isSignedIn() && (isSessionOwner(sessionId) || resource.data.studentId == request.auth.uid);
+      allow get: if isSignedIn() && (isSessionOwner(sessionId) || (isExistingDoc() && resource.data.studentId == request.auth.uid));
       allow list: if isSessionOwner(sessionId) || (isSignedIn() && request.query.where.studentId == request.auth.uid);
-      allow create: if isSessionOwner(sessionId);
-      allow update, delete: if isSessionOwner(sessionId);
+      allow create, update, delete: if isSessionOwner(sessionId);
     }
     
     /**
-     * @description Secure rule for Collection Group queries on 'attendanceIntervals'.
+     * @description Secure rule for Collection Group queries on 'attendanceIntervals'. Students can only query for their own records.
      * @path /{path=**}/attendanceIntervals/{intervalId}
      */
     match /{path=**}/attendanceIntervals/{intervalId} {
-      allow list: if isSignedIn() && (request.auth.uid == resource.data.studentId);
+      allow list: if isSignedIn() && (request.query.where.studentId == request.auth.uid);
     }
 
     /**
@@ -149,9 +148,9 @@ service cloud.firestore {
      * @path /attendanceSessions/{sessionId}/attendanceSummary/{summaryId}
      */
     match /attendanceSessions/{sessionId}/attendanceSummary/{summaryId} {
-      allow get: if isSignedIn() && (isSessionOwner(sessionId) || resource.data.studentId == request.auth.uid);
+      allow get: if isSignedIn() && (isSessionOwner(sessionId) || (isExistingDoc() && resource.data.studentId == request.auth.uid));
       allow list: if isSessionOwner(sessionId);
-      allow create, update, delete: if false;
+      allow create, update, delete: if false; // Only backend/functions can write summaries
     }
 
     // --------------------------------
@@ -164,8 +163,8 @@ service cloud.firestore {
      */
     match /quizzes/{quizId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isQuizOwner(quizId);
     }
 
     /**
@@ -194,7 +193,7 @@ service cloud.firestore {
      */
     match /assignments/{assignmentId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isAssignmentOwner(assignmentId);
     }
 
@@ -224,7 +223,7 @@ service cloud.firestore {
      */
     match /resources/{resourceId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.uploaderId == request.auth.uid;
+      allow create: if isTeacher() && request.resource.data.uploaderId == request.auth.uid;
       allow update, delete: if isExistingDoc() && resource.data.uploaderId == request.auth.uid;
     }
 
