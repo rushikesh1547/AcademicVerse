@@ -171,29 +171,16 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
             });
 
             if (result.identifiedStudentIds.length > 0) {
-                const identifiedNames: string[] = [];
-                const attendanceCollectionRef = collection(firestore, 'attendanceSessions', newSessionId, 'attendanceIntervals');
-                
-                for (const studentId of result.identifiedStudentIds) {
-                    const student = students.find(s => s.id === studentId);
-                    if (student) {
-                        identifiedNames.push(student.displayName);
-                        // Using non-blocking adds for speed
-                        addDocumentNonBlocking(attendanceCollectionRef, {
-                            sessionId: newSessionId,
-                            studentId: student.id,
-                            studentName: student.displayName,
-                            timestamp: serverTimestamp(),
-                            presenceStatus: true,
-                            faceRecognitionData: `Verified by teacher scan`,
-                        });
-                    }
-                }
-                
-                // Update the session document with the array of present students
+                // Update the session document with the array of present students. This is the source of truth.
                 const sessionDocRef = doc(firestore, 'attendanceSessions', newSessionId);
                 updateDocumentNonBlocking(sessionDocRef, { presentStudentIds: result.identifiedStudentIds });
                 
+                // Prepare names for the toast message
+                const identifiedNames = result.identifiedStudentIds.map(studentId => {
+                    const student = students.find(s => s.id === studentId);
+                    return student ? student.displayName : 'Unknown Student';
+                }).filter(name => name !== 'Unknown Student');
+
                 setLastScanResults(identifiedNames);
                 toast({
                     title: "Scan Complete",

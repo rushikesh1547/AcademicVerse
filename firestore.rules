@@ -122,7 +122,8 @@ service cloud.firestore {
     match /attendanceSessions/{sessionId} {
       allow get, list: if isSignedIn();
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      allow update, delete: if isSessionOwner(sessionId);
+      allow update: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow delete: if isSessionOwner(sessionId);
     }
 
     /**
@@ -194,7 +195,7 @@ service cloud.firestore {
      * @path /{path=**}/assignmentSubmissions/{submissionId}
      */
     match /{path=**}/assignmentSubmissions/{submissionId} {
-      allow list: if isSignedIn() && (request.query.where.studentId == request.auth.uid || request.query.where.teacherId == request.auth.uid);
+      allow list: if isSignedIn() && (request.query.where[0][2] == request.auth.uid || request.query.where[1][2] == request.auth.uid);
     }
 
     /**
