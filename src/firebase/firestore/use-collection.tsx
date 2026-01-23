@@ -33,7 +33,11 @@ export interface InternalQuery extends Query<DocumentData> {
     path: {
       canonicalString(): string;
       toString(): string;
-    }
+    },
+    // This property exists on collection group queries
+    collectionGroup?: string;
+    // This property exists on all queries
+    kind?: string;
   }
 }
 
@@ -69,28 +73,28 @@ export function useCollection<T = any>(
       return;
     }
   
-    // 🔒 SAFETY: prevent Firestore root access
-    let isRoot = false;
-  
-    if ('path' in memoizedTargetRefOrQuery) {
-      // CollectionReference case
-      isRoot = memoizedTargetRefOrQuery.path === '';
-    } else {
-      // Query case
-      const queryPath = (memoizedTargetRefOrQuery as InternalQuery)
-        ._query.path.canonicalString();
-      isRoot = queryPath === '';
+    // 🔒 SAFETY: prevent Firestore root access by checking for non-collection-group queries on the root.
+    let isRootQuery = false;
+    if (memoizedTargetRefOrQuery.type === 'query') {
+        const internalQuery = (memoizedTargetRefOrQuery as InternalQuery)._query;
+        // A query is a root query if it's NOT a collection group query and its path is empty.
+        if (internalQuery.kind !== 'collectionGroup' && internalQuery.path.canonicalString() === '') {
+            isRootQuery = true;
+        }
+    } else if (memoizedTargetRefOrQuery.type === 'collection') {
+        // A collection ref is a root query if its path is empty.
+        if (memoizedTargetRefOrQuery.path === '') {
+            isRootQuery = true;
+        }
     }
   
-    if (isRoot) {
+    if (isRootQuery) {
+      console.warn('useCollection: Root collection queries are not allowed.');
       setData(null);
       setIsLoading(false);
-      setError(null);
+      setError(new Error('Root collection queries are not allowed.'));
       return;
     }
-  
-    
-  
 
     setIsLoading(true);
     setError(null);
@@ -109,10 +113,14 @@ export function useCollection<T = any>(
       },
       (error: FirestoreError) => {
         // This logic extracts the path from either a ref or a query
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        let path: string;
+        if (memoizedTargetRefOrQuery.type === 'collection') {
+            path = (memoizedTargetRefOrQuery as CollectionReference).path;
+        } else { // It's a query
+            const internalQuery = (memoizedTargetRefOrQuery as InternalQuery)._query;
+            // For collection group queries, the 'path' is the collection ID itself.
+            path = internalQuery.collectionGroup ?? internalQuery.path.canonicalString();
+        }
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
