@@ -13,7 +13,6 @@ const searchablePages = [
     { href: '/dashboard/student', label: 'Student Dashboard' },
     { href: '/dashboard/student/profile', label: 'Profile' },
     { href: '/dashboard/student/attendance', label: 'Attendance' },
-    { href: '/dashboard/student/attendance/mark', label: 'Mark Attendance' },
     { href: '/dashboard/student/quizzes', label: 'Quizzes' },
     { href: '/dashboard/student/assignments', label: 'Assignments' },
     { href: '/dashboard/student/resources', label: 'Resources' },

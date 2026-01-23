@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -17,24 +16,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { BarChart3, Loader2, Camera, CheckCircle, CircleOff } from 'lucide-react';
+import { BarChart3, Loader2, CheckCircle, CircleOff } from 'lucide-react';
 import {
   useCollection,
   useFirestore,
   useUser,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, query, where, collectionGroup } from 'firebase/firestore';
-import { Button } from '@/components/ui/button';
+import { collection, query, where, collectionGroup, orderBy } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AttendancePage() {
   const firestore = useFirestore();
   const { user } = useUser();
 
   const sessionsQuery = useMemoFirebase(
-    () => collection(firestore, 'attendanceSessions'),
+    () => query(collection(firestore, 'attendanceSessions'), orderBy('startTime', 'desc')),
     [firestore]
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection(sessionsQuery);
@@ -53,74 +50,18 @@ export default function AttendancePage() {
     return new Map(myIntervals.map(interval => [interval.sessionId, interval]));
   }, [myIntervals]);
 
-  const activeSessions = useMemo(
-    () => sessions?.filter(s => s.status === 'active') || [],
-    [sessions]
-  );
-  
-  const historicalSessions = useMemo(
-    () => sessions?.filter(s => s.status !== 'active').sort((a, b) => (b.startTime?.toDate() || 0) - (a.startTime?.toDate() || 0)) || [],
-    [sessions]
-  );
-
   const isLoading = isLoadingSessions || isLoadingIntervals;
 
   return (
     <div className="grid gap-6">
-      <Card>
+       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-6 w-6" />
-            Attendance
+            Attendance History
           </CardTitle>
           <CardDescription>
-            Mark your attendance for active sessions and view your past records.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-             <div className="flex items-center justify-center h-24">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-             </div>
-          ) : activeSessions.length > 0 ? (
-            <div className="grid gap-4">
-                {activeSessions.map(session => {
-                    const hasAttended = myIntervalsMap.has(session.id);
-                    return (
-                        <Alert key={session.id} variant="default">
-                            <Camera className="h-4 w-4" />
-                            <AlertTitle className="flex items-center justify-between">
-                                {session.title}
-                                {hasAttended ? (
-                                    <Badge variant="default" className="gap-1.5 pl-1.5">
-                                        <CheckCircle className="h-4 w-4" />
-                                        Attended
-                                    </Badge>
-                                ) : (
-                                    <Button asChild size="sm">
-                                        <Link href={`/dashboard/student/attendance/mark?sessionId=${session.id}`}>
-                                            Mark My Attendance
-                                        </Link>
-                                    </Button>
-                                )}
-                            </AlertTitle>
-                            <AlertDescription>
-                                This attendance session is currently active. Please mark your attendance now.
-                            </AlertDescription>
-                        </Alert>
-                    )
-                })}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">There are no active attendance sessions right now.</p>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Attendance History</CardTitle>
-          <CardDescription>
-            Detailed attendance records for all past sessions.
+            Your attendance is marked by your teacher. Here are your records for all past sessions.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -138,13 +79,15 @@ export default function AttendancePage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {historicalSessions.length > 0 ? (
-                        historicalSessions.map((session) => {
+                    {sessions && sessions.length > 0 ? (
+                        sessions.map((session) => {
                             const hasAttended = myIntervalsMap.has(session.id);
+                            // Only show sessions that have started
+                            if (!session.startTime) return null;
                             return (
                                 <TableRow key={session.id}>
                                     <TableCell className="font-medium">{session.title}</TableCell>
-                                    <TableCell>{session.startTime?.toDate().toLocaleDateString() || 'N/A'}</TableCell>
+                                    <TableCell>{session.startTime?.toDate().toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
                                         <Badge variant={hasAttended ? 'default' : 'destructive'} className="gap-1.5 pl-1.5">
                                             {hasAttended ? <CheckCircle className="h-4 w-4" /> : <CircleOff className="h-4 w-4" />}
@@ -157,7 +100,7 @@ export default function AttendancePage() {
                     ) : (
                         <TableRow>
                             <TableCell colSpan={3} className="h-24 text-center">
-                                No historical attendance records found.
+                                No attendance records found.
                             </TableCell>
                         </TableRow>
                     )}

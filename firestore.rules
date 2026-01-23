@@ -132,8 +132,8 @@ service cloud.firestore {
     match /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId} {
       allow get: if isSignedIn() && (isSessionOwner(sessionId) || resource.data.studentId == request.auth.uid);
       allow list: if isSessionOwner(sessionId) || (isSignedIn() && request.query.where.studentId == request.auth.uid);
-      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid && get(/databases/$(database)/documents/attendanceSessions/$(sessionId)).data.status == 'active' || isSessionOwner(sessionId);
-      allow update, delete: if isExistingDoc() && resource.data.studentId == request.auth.uid;
+      allow create: if isSessionOwner(sessionId);
+      allow update, delete: if isSessionOwner(sessionId);
     }
     
     /**
@@ -203,7 +203,7 @@ service cloud.firestore {
      * @path /{path=**}/assignmentSubmissions/{submissionId}
      */
     match /{path=**}/assignmentSubmissions/{submissionId} {
-      allow list: if isSignedIn() && request.query.where.studentId == request.auth.uid;
+      allow list: if isSignedIn() && (request.query.where.studentId == request.auth.uid || request.query.where.teacherId == request.auth.uid);
     }
 
     /**
