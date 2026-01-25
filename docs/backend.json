@@ -864,14 +864,18 @@
         }
       },
       {
-        "path": "examForms/{formId}",
+        "path": "users/{userId}/examForms/{formId}",
         "definition": {
           "entityName": "ExamForm",
           "schema": {
             "$ref": "#/backend/entities/ExamForm"
           },
-          "description": "Stores exam form information for student submissions and teacher approvals.",
+          "description": "Stores student exam form submissions. Path-based ownership for students. Teachers can list via collection group query.",
           "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
             {
               "name": "formId",
               "description": "The unique identifier of the exam form."

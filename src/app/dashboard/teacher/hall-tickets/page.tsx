@@ -32,7 +32,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Ticket, Upload } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, useFirebaseApp, addDocumentNonBlocking, useUser, useDoc } from "@/firebase";
-import { collection, query, where, orderBy, serverTimestamp, doc } from "firebase/firestore";
+import { collectionGroup, query, where, orderBy, serverTimestamp, doc, collection } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from "@/hooks/use-toast";
 
@@ -132,7 +132,7 @@ export default function HallTicketsPage() {
 
   const approvedFormsQuery = useMemoFirebase(
     () => (userData?.role === 'teacher')
-      ? query(collection(firestore, 'examForms'), where('approvalStatus', '==', 'Approved'), orderBy('createdAt', 'desc'))
+      ? query(collectionGroup(firestore, 'examForms'), where('approvalStatus', '==', 'Approved'), orderBy('createdAt', 'desc'))
       : null,
     [firestore, userData]
   );

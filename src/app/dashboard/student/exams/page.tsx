@@ -21,14 +21,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Pencil, FilePlus } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
+import { collection, query, orderBy } from "firebase/firestore";
 
 export default function ExamsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
   const examFormsQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'examForms'), where('studentId', '==', user.uid), orderBy('createdAt', 'desc')) : null,
+    () => user ? query(collection(firestore, 'users', user.uid, 'examForms'), orderBy('createdAt', 'desc')) : null,
     [user, firestore]
   );
   const { data: submittedForms, isLoading: isLoadingForms } = useCollection(examFormsQuery);

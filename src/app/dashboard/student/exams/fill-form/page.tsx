@@ -110,7 +110,7 @@ export default function FillExamFormPage() {
             const feeReceiptUrl = await getDownloadURL(snapshot.ref);
 
             // Save form data
-            await addDocumentNonBlocking(collection(firestore, "examForms"), {
+            await addDocumentNonBlocking(collection(firestore, "users", user.uid, "examForms"), {
                 studentId: user.uid,
                 studentName: user.displayName,
                 examType: data.examType,

@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckSquare, Eye, Check, X } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useUser, useDoc } from "@/firebase";
-import { collection, query, where, orderBy, doc } from "firebase/firestore";
+import { collectionGroup, query, where, orderBy, doc } from "firebase/firestore";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
@@ -42,14 +42,14 @@ export default function ExamApprovalsPage() {
 
   const pendingFormsQuery = useMemoFirebase(
     () => (userData?.role === 'teacher') 
-      ? query(collection(firestore, 'examForms'), where('approvalStatus', '==', 'Pending'), orderBy('createdAt', 'asc')) 
+      ? query(collectionGroup(firestore, 'examForms'), where('approvalStatus', '==', 'Pending'), orderBy('createdAt', 'asc')) 
       : null,
     [firestore, userData]
   );
   const { data: pendingForms, isLoading: isLoadingForms } = useCollection(pendingFormsQuery);
 
-  const handleUpdateStatus = (formId: string, status: 'Approved' | 'Rejected') => {
-    const formRef = doc(firestore, 'examForms', formId);
+  const handleUpdateStatus = (form: any, status: 'Approved' | 'Rejected') => {
+    const formRef = doc(firestore, 'users', form.studentId, 'examForms', form.id);
     updateDocumentNonBlocking(formRef, { approvalStatus: status });
     toast({
         title: `Form ${status}`,
@@ -106,10 +106,10 @@ export default function ExamApprovalsPage() {
                     </Button>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button size="sm" onClick={() => handleUpdateStatus(form.id, 'Approved')}>
+                    <Button size="sm" onClick={() => handleUpdateStatus(form, 'Approved')}>
                         <Check className="mr-2 h-4 w-4" /> Approve
                     </Button>
-                     <Button size="sm" variant="destructive" onClick={() => handleUpdateStatus(form.id, 'Rejected')}>
+                     <Button size="sm" variant="destructive" onClick={() => handleUpdateStatus(form, 'Rejected')}>
                         <X className="mr-2 h-4 w-4" /> Reject
                     </Button>
                   </TableCell>

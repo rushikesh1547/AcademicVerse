@@ -122,7 +122,7 @@ service cloud.firestore {
     match /attendanceSessions/{sessionId} {
       allow get, list: if isSignedIn();
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      allow update: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow update: if isSessionOwner(sessionId);
       allow delete: if isSessionOwner(sessionId);
     }
 
@@ -191,19 +191,11 @@ service cloud.firestore {
     }
 
     /**
-     * @description Secure rule for Collection Group queries on 'assignmentSubmissions'.
-     * @path /{path=**}/assignmentSubmissions/{submissionId}
-     */
-    match /{path=**}/assignmentSubmissions/{submissionId} {
-      allow list: if isSignedIn() && (request.query.where[0][2] == request.auth.uid || request.query.where[1][2] == request.auth.uid);
-    }
-
-    /**
      * @description Manages direct access to assignment submissions.
      * @path /assignments/{assignmentId}/assignmentSubmissions/{submissionId}
      */
     match /assignments/{assignmentId}/assignmentSubmissions/{submissionId} {
-      allow list: if isAssignmentOwner(assignmentId) && request.query.where.teacherId == request.auth.uid;
+      allow list: if isAssignmentOwner(assignmentId);
       allow get: if isAssignmentOwner(assignmentId) || (isExistingDoc() && resource.data.studentId == request.auth.uid);
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid && request.resource.data.teacherId == get(/databases/$(database)/documents/assignments/$(assignmentId)).data.teacherId;
       allow update: if isExistingDoc() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid);
@@ -221,21 +213,27 @@ service cloud.firestore {
     }
 
     // --------------------------------
-    // Examination and Hall Ticket Rules
+    // Collection Group Query Rules
     // --------------------------------
 
     /**
-     * @description Manages exam form submissions and approvals.
-     * @path /examForms/{formId}
+     * @description Secure rule for Collection Group queries on 'assignmentSubmissions'.
+     * @path /{path=**}/assignmentSubmissions/{submissionId}
      */
-    match /examForms/{formId} {
-      allow get: if (isExistingDoc() && resource.data.studentId == request.auth.uid) || isTeacher();
-      allow list: if (isSignedIn() && request.query.where.studentId == request.auth.uid) || isTeacher();
-      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow update: if isTeacher() && request.resource.data.keys().hasOnly(['approvalStatus']);
-      allow delete: if isExistingDoc() && resource.data.studentId == request.auth.uid && resource.data.approvalStatus == 'Pending';
+    match /{path=**}/assignmentSubmissions/{submissionId} {
+      // Students can query their own submissions across all assignments.
+      // Teachers can query submissions they are the teacher for.
+      allow list: if isSignedIn() && (request.query.where[0][2] == request.auth.uid);
     }
 
+    /**
+     * @description Collection group query for teachers to list all exam forms.
+     * @path /{path=**}/examForms/{formId}
+     */
+    match /{path=**}/examForms/{formId} {
+      allow list: if isTeacher();
+    }
+    
     // --------------------------------
     // Student-Owned Document Rules
     // --------------------------------
@@ -269,6 +267,16 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    /**
+     * @description Students own their exam forms. Teachers can update status.
+     * @path /users/{userId}/examForms/{formId}
+     */
+    match /users/{userId}/examForms/{formId} {
+      allow get, list, create: if isOwner(userId);
+      allow update: if isTeacher() && request.resource.data.keys().hasOnly(['approvalStatus']);
+      allow delete: if isOwner(userId) && resource.data.approvalStatus == 'Pending';
+    }
+    
     /**
      * @description Users can only access notifications within their own user space.
      * @path /users/{userId}/notifications/{notificationId}
