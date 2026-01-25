@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import {
   GraduationCap,
@@ -20,12 +22,14 @@ import { TeacherNav } from '@/components/teacher-nav';
 import { UserNav } from '@/components/user-nav';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { SearchBar } from '@/components/search';
+import { useUser } from '@/firebase';
 
 export default function TeacherDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user } = useUser();
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:block">
@@ -59,7 +63,7 @@ export default function TeacherDashboardLayout({
             </SheetContent>
           </Sheet>
           <SearchBar />
-          <UserNav role="teacher" />
+          <UserNav key={user?.uid} role="teacher" />
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
           <FirebaseErrorListener />
