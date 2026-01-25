@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +43,7 @@ export default function ProfilePage() {
   const firestore = useFirestore();
   const firebaseApp = useFirebaseApp();
   const { toast } = useToast();
+  const router = useRouter();
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -63,6 +65,16 @@ export default function ProfilePage() {
 
   const attendanceSummary: any[] = [];
   const assignments: any[] = [];
+
+  useEffect(() => {
+    if (!isUserLoading && !isUserDataLoading) {
+      if (!user) {
+        router.replace('/');
+      } else if (userData && userData.role !== 'student') {
+        router.replace('/dashboard');
+      }
+    }
+  }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
   useEffect(() => {
     if (userData?.displayName) {
@@ -230,6 +242,30 @@ export default function ProfilePage() {
   const isLoading = isUserLoading || isUserDataLoading;
   const isEnrolled = userData?.faceProfileImageUrls && userData.faceProfileImageUrls.length >= ENROLLMENT_STEPS.length;
 
+  if (isLoading || (userData && userData.role !== 'student')) {
+    return (
+        <div className="grid gap-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><User className="h-6 w-6" />Student Profile</CardTitle>
+                    <CardDescription>The single source of truth for your academic life.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-start gap-6">
+                        <Skeleton className="h-24 w-24 rounded-full" />
+                        <div className="grid gap-2 flex-1">
+                            <Skeleton className="h-8 w-48" />
+                            <Skeleton className="h-5 w-64" />
+                            <Skeleton className="h-5 w-72" />
+                            <Skeleton className="h-5 w-40" />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
+
   return (
     <div className="grid gap-6">
       <Card>
@@ -241,17 +277,6 @@ export default function ProfilePage() {
           <CardDescription>The single source of truth for your academic life.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-start gap-6">
-              <Skeleton className="h-24 w-24 rounded-full" />
-              <div className="grid gap-2 flex-1">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-5 w-64" />
-                <Skeleton className="h-5 w-72" />
-                <Skeleton className="h-5 w-40" />
-              </div>
-            </div>
-          ) : (
             <div className="flex flex-col md:flex-row items-start gap-6">
               <Avatar className="h-24 w-24">
                 {userData?.profileImageUrl ? (
@@ -264,7 +289,7 @@ export default function ProfilePage() {
               </Avatar>
               <div className="grid gap-1.5 flex-1">
                 <h2 className="text-2xl font-bold font-headline">{userData?.displayName}</h2>
-                <p className="text-muted-foreground">Role: Student</p>
+                <p className="text-muted-foreground capitalize">Role: {userData?.role}</p>
                 <p className="text-muted-foreground">Email: {userData?.email}</p>
                 <div className="flex items-center gap-2 mt-1">
                     <Badge variant={isEnrolled ? "default" : "secondary"}>
@@ -287,7 +312,6 @@ export default function ProfilePage() {
                   </Button>
               </div>
             </div>
-          )}
         </CardContent>
       </Card>
       
@@ -490,5 +514,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

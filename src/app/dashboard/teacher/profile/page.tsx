@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +33,7 @@ export default function TeacherProfilePage() {
   const firestore = useFirestore();
   const firebaseApp = useFirebaseApp();
   const { toast } = useToast();
+  const router = useRouter();
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -44,6 +46,16 @@ export default function TeacherProfilePage() {
   const [openUploadPhotoDialog, setOpenUploadPhotoDialog] = useState(false);
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  useEffect(() => {
+    if (!isUserLoading && !isUserDataLoading) {
+      if (!user) {
+        router.replace('/');
+      } else if (userData && userData.role !== 'teacher') {
+        router.replace('/dashboard');
+      }
+    }
+  }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
   useEffect(() => {
     if (userData?.displayName) {
@@ -96,6 +108,32 @@ export default function TeacherProfilePage() {
   };
 
   const isLoading = isUserLoading || isUserDataLoading;
+  
+  if (isLoading || (userData && userData.role !== 'teacher')) {
+    return (
+      <>
+        <div className="flex items-center">
+          <h1 className="text-lg font-semibold md:text-2xl">Teacher Profile</h1>
+        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><User className="h-6 w-6" />Profile Information</CardTitle>
+                <CardDescription>View and edit your personal details.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-start gap-6">
+                  <Skeleton className="h-24 w-24 rounded-full" />
+                  <div className="grid gap-2 flex-1">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-5 w-64" />
+                    <Skeleton className="h-5 w-40" />
+                  </div>
+                </div>
+            </CardContent>
+        </Card>
+      </>
+    )
+  }
 
   return (
     <>
@@ -111,16 +149,6 @@ export default function TeacherProfilePage() {
           <CardDescription>View and edit your personal details.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-start gap-6">
-              <Skeleton className="h-24 w-24 rounded-full" />
-              <div className="grid gap-2 flex-1">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-5 w-64" />
-                <Skeleton className="h-5 w-40" />
-              </div>
-            </div>
-          ) : (
             <div className="flex flex-col md:flex-row items-start gap-6">
               <Avatar className="h-24 w-24">
                 {userData?.profileImageUrl ? (
@@ -133,7 +161,7 @@ export default function TeacherProfilePage() {
               </Avatar>
               <div className="grid gap-1.5 flex-1">
                 <h2 className="text-2xl font-bold font-headline">{userData?.displayName}</h2>
-                <p className="text-muted-foreground">Role: Teacher</p>
+                <p className="text-muted-foreground capitalize">Role: {userData?.role}</p>
                 <p className="text-muted-foreground">Email: {userData?.email}</p>
               </div>
               <div className="flex w-full md:w-auto flex-wrap gap-2 mt-4 md:mt-0">
@@ -147,7 +175,6 @@ export default function TeacherProfilePage() {
                     </Button>
               </div>
             </div>
-          )}
         </CardContent>
       </Card>
 
