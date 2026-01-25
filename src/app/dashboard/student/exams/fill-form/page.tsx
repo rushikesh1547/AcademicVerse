@@ -33,8 +33,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useFirebaseApp } from "@/firebase";
-import { collection, serverTimestamp, addDoc } from "firebase/firestore";
+import { useUser, useFirestore, useFirebaseApp, useDoc, useMemoFirebase } from "@/firebase"; // Import useDoc and useMemoFirebase
+import { collection, serverTimestamp, addDoc, doc } from "firebase/firestore"; // Import doc
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Progress } from '@/components/ui/progress';
 
@@ -69,6 +69,13 @@ export default function FillExamFormPage() {
     const storage = getStorage(firebaseApp);
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Fetch user data from firestore
+    const userDocRef = useMemoFirebase(
+      () => (user ? doc(firestore, 'users', user.uid) : null),
+      [user, firestore]
+    );
+    const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
   
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -98,8 +105,8 @@ export default function FillExamFormPage() {
     }
 
     async function onSubmit(data: z.infer<typeof formSchema>) {
-        if (!user) {
-            toast({ variant: "destructive", title: "Not Logged In" });
+        if (!user || !userData) {
+            toast({ variant: "destructive", title: "Not Logged In", description: "User data is not available. Please try again." });
             return;
         }
 
@@ -109,6 +116,11 @@ export default function FillExamFormPage() {
         try {
             // Step 1: Upload receipt and get URL
             const receiptFile = data.feeReceipt;
+            if (!receiptFile) { // This check is for type safety, the schema already validates it
+                 toast({ variant: "destructive", title: "File Missing", description: "Fee receipt is required." });
+                 setIsSubmitting(false);
+                 return;
+            }
             const storageRef = ref(storage, `fee-receipts/${user.uid}/${Date.now()}-${receiptFile.name}`);
             const snapshot = await uploadBytes(storageRef, receiptFile);
             feeReceiptUrl = await getDownloadURL(snapshot.ref);
@@ -120,15 +132,15 @@ export default function FillExamFormPage() {
                 title: "File Upload Failed",
                 description: "Could not upload your fee receipt. Please check storage permissions and try again.",
             });
-            setIsSubmitting(false); // Make sure to stop loading state
-            return; // Stop execution
+            setIsSubmitting(false);
+            return;
         }
 
         try {
             // Step 2: Save form data to Firestore
             await addDoc(collection(firestore, "users", user.uid, "examForms"), {
                 studentId: user.uid,
-                studentName: user.displayName,
+                studentName: userData.displayName, // Use displayName from Firestore user doc
                 examType: data.examType,
                 subjectsSelected: data.subjectIds.map(id => subjects.find(s => s.id === id)?.name).filter(Boolean),
                 feeReceiptUrl,
@@ -235,14 +247,15 @@ export default function FillExamFormPage() {
                                 <FormField
                                     control={form.control}
                                     name="feeReceipt"
-                                    render={({ field }) => (
+                                    render={({ field: { value, onChange, ...fieldProps } }) => (
                                         <FormItem>
                                             <FormLabel>Fee Receipt</FormLabel>
                                             <FormControl>
                                                 <Input
+                                                    {...fieldProps}
                                                     type="file"
                                                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                                    onChange={(event) => field.onChange(event.target.files && event.target.files[0])}
+                                                    onChange={(event) => onChange(event.target.files && event.target.files[0])}
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -259,7 +272,7 @@ export default function FillExamFormPage() {
                                 {currentStep < STEPS.length ? (
                                     <Button type="button" onClick={handleNext}>Next</Button>
                                 ) : (
-                                    <Button type="submit" disabled={isUserLoading || isSubmitting}>
+                                    <Button type="submit" disabled={isUserLoading || isUserDataLoading || isSubmitting}>
                                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Submit Form
                                     </Button>
