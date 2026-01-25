@@ -33,8 +33,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, addDocumentNonBlocking, useFirebaseApp } from "@/firebase";
-import { collection, serverTimestamp } from "firebase/firestore";
+import { useUser, useFirestore, useFirebaseApp } from "@/firebase";
+import { collection, serverTimestamp, addDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Progress } from '@/components/ui/progress';
 
@@ -75,18 +75,20 @@ export default function FillExamFormPage() {
         defaultValues: {
             examType: "regular",
             subjectIds: [],
-            feeReceipt: undefined,
         },
     });
 
     const handleNext = async () => {
-        let fields: ("examType" | "subjectIds")[] = [];
+        let fields: ("examType" | "subjectIds" | "feeReceipt")[] = [];
         if (currentStep === 1) fields = ['examType'];
         if (currentStep === 2) fields = ['subjectIds'];
+        if (currentStep === 3) fields = ['feeReceipt'];
         
-        const isValid = await form.trigger(fields);
+        const isValid = await form.trigger(fields as any);
         if (isValid) {
-            setCurrentStep(step => step + 1);
+            if (currentStep < STEPS.length) {
+                setCurrentStep(step => step + 1);
+            }
         }
     }
 
@@ -101,20 +103,33 @@ export default function FillExamFormPage() {
         }
 
         setIsSubmitting(true);
+        let feeReceiptUrl = '';
 
         try {
-            // Upload receipt
+            // Step 1: Upload receipt and get URL
             const receiptFile = data.feeReceipt;
             const storageRef = ref(storage, `fee-receipts/${user.uid}/${Date.now()}-${receiptFile.name}`);
             const snapshot = await uploadBytes(storageRef, receiptFile);
-            const feeReceiptUrl = await getDownloadURL(snapshot.ref);
+            feeReceiptUrl = await getDownloadURL(snapshot.ref);
 
-            // Save form data
-            await addDocumentNonBlocking(collection(firestore, "users", user.uid, "examForms"), {
+        } catch (error: any) {
+            console.error("Error uploading file:", error);
+            toast({
+                variant: "destructive",
+                title: "File Upload Failed",
+                description: "Could not upload your fee receipt. Please check storage permissions and try again.",
+            });
+            setIsSubmitting(false); // Make sure to stop loading state
+            return; // Stop execution
+        }
+
+        try {
+            // Step 2: Save form data to Firestore
+            await addDoc(collection(firestore, "users", user.uid, "examForms"), {
                 studentId: user.uid,
                 studentName: user.displayName,
                 examType: data.examType,
-                subjectsSelected: data.subjectIds.map(id => subjects.find(s => s.id === id)?.name),
+                subjectsSelected: data.subjectIds.map(id => subjects.find(s => s.id === id)?.name).filter(Boolean),
                 feeReceiptUrl,
                 approvalStatus: "Pending",
                 createdAt: serverTimestamp(),
@@ -125,12 +140,13 @@ export default function FillExamFormPage() {
                 description: "Your exam form has been submitted for approval.",
             });
             router.push('/dashboard/student/exams');
+
         } catch (error) {
-            console.error("Error submitting form:", error);
+            console.error("Error saving form to Firestore:", error);
             toast({
                 variant: "destructive",
                 title: "Submission Failed",
-                description: "There was an error submitting your form.",
+                description: "Your file was uploaded, but we couldn't save the form. Please try again.",
             });
         } finally {
             setIsSubmitting(false);
@@ -224,7 +240,6 @@ export default function FillExamFormPage() {
                                             <FormControl>
                                                 <Input
                                                     {...fieldProps}
-                                                    value={undefined}
                                                     type="file"
                                                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                                     onChange={(event) => onChange(event.target.files && event.target.files[0])}
