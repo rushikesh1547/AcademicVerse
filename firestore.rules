@@ -71,17 +71,24 @@ service cloud.firestore {
         return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
 
+    /**
+     * Checks if the requesting user has the 'admin' role.
+     */
+    function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // --------------------------------
     // User & Profile Rules
     // --------------------------------
 
     /**
-     * @description Users can create and manage their own user document. Listing users is allowed for teachers.
+     * @description Users can create and manage their own user document. Listing users is allowed for teachers and admins.
      * @path /users/{userId}
      */
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isTeacher();
+      allow list: if isTeacher() || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.authenticationUid == userId;
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
@@ -122,7 +129,7 @@ service cloud.firestore {
     match /attendanceSessions/{sessionId} {
       allow get, list: if isSignedIn();
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      allow update: if isSessionOwner(sessionId);
+      allow update: if isSessionOwner(sessionId) && request.resource.data.keys().hasOnly(['presentStudentIds']);
       allow delete: if isSessionOwner(sessionId);
     }
 
@@ -231,7 +238,7 @@ service cloud.firestore {
      * @path /{path=**}/examForms/{formId}
      */
     match /{path=**}/examForms/{formId} {
-      allow list: if isTeacher();
+      allow list: if isTeacher() || isAdmin();
     }
     
     // --------------------------------
