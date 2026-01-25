@@ -11,13 +11,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import { Skeleton } from './ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export function UserNav({ role }: { role: 'student' | 'teacher' | 'admin' }) {
   const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -25,7 +31,25 @@ export function UserNav({ role }: { role: 'student' | 'teacher' | 'admin' }) {
   );
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
-  // The main loading state should consider auth loading, and also data loading if a user is present.
+  const handleLogout = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+      router.push('/');
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        variant: "destructive",
+        title: "Logout Failed",
+        description: "An error occurred while logging out.",
+      });
+    }
+  };
+
   const isLoading = isUserLoading || (user && isUserDataLoading);
 
   if (isLoading) {
@@ -45,7 +69,7 @@ export function UserNav({ role }: { role: 'student' | 'teacher' | 'admin' }) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            {userAvatarUrl && <AvatarImage src={userAvatarUrl} alt={userDisplayName} />}
+            {userAvatarUrl && <AvatarImage src={userAvatarUrl} alt={userDisplayName || ''} />}
             <AvatarFallback>{fallback}</AvatarFallback>
           </Avatar>
         </Button>
@@ -65,15 +89,15 @@ export function UserNav({ role }: { role: 'student' | 'teacher' | 'admin' }) {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href={profileUrl} className='w-full'>Profile</Link>
+                <Link href={profileUrl}>Profile</Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </>
         )}
         
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-           <Link href="/" className='w-full'>Log out</Link>
+        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
