@@ -84,21 +84,24 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           const userDocSnap = await getDoc(userDocRef);
 
           if (!userDocSnap.exists()) {
-            // New user! Create their document in Firestore.
-            let role = 'student';
-            // Default display name is from the auth provider, or 'New Student'
-            let displayName = firebaseUser.displayName || 'New Student';
-        
-            // Special case for the admin user
-            if (firebaseUser.email === 'admin@example.com') {
+            // New user! Create their document in Firestore based on strict email rules.
+            let role = 'student'; // Default role
+            let defaultDisplayName = 'New Student';
+
+            if (firebaseUser.email) {
+              if (firebaseUser.email.endsWith('@teacher.com')) {
+                role = 'teacher';
+                defaultDisplayName = 'New Teacher';
+              } else if (firebaseUser.email === 'admin@example.com') {
                 role = 'admin';
-                displayName = 'New Admin';
+                defaultDisplayName = 'New Admin';
+              }
             }
 
             const newUserDoc = {
               authenticationUid: firebaseUser.uid,
               email: firebaseUser.email,
-              displayName: displayName,
+              displayName: firebaseUser.displayName || defaultDisplayName,
               role: role,
               faceProfileImageUrls: [],
             };
