@@ -25,15 +25,18 @@ export function UserNav({ role }: { role: 'student' | 'teacher' | 'admin' }) {
   );
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
-  const isLoading = isUserLoading || isUserDataLoading;
+  // The main loading state should consider auth loading, and also data loading if a user is present.
+  const isLoading = isUserLoading || (user && isUserDataLoading);
 
   if (isLoading) {
     return <Skeleton className="h-9 w-9 rounded-full" />;
   }
 
-  const userDisplayName = userData?.displayName || 'User';
-  const userEmail = userData?.email || '';
-  const userAvatarUrl = userData?.profileImageUrl;
+  // Prioritize Firestore data as the source of truth, but fall back to auth data.
+  // This makes the UI more resilient to Firestore latency.
+  const userDisplayName = userData?.displayName || user?.displayName || (role === 'admin' ? 'Admin' : 'User');
+  const userEmail = userData?.email || user?.email || '';
+  const userAvatarUrl = userData?.profileImageUrl || user?.photoURL;
   const fallback = userDisplayName?.charAt(0).toUpperCase() || 'U';
   const profileUrl = `/dashboard/${role}/profile`;
 
