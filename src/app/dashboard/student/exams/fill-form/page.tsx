@@ -75,6 +75,7 @@ export default function FillExamFormPage() {
         defaultValues: {
             examType: "regular",
             subjectIds: [],
+            feeReceipt: undefined,
         },
     });
 
@@ -234,15 +235,14 @@ export default function FillExamFormPage() {
                                 <FormField
                                     control={form.control}
                                     name="feeReceipt"
-                                    render={({ field: { onChange, ...fieldProps }}) => (
+                                    render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Fee Receipt</FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    {...fieldProps}
                                                     type="file"
                                                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                                    onChange={(event) => onChange(event.target.files && event.target.files[0])}
+                                                    onChange={(event) => field.onChange(event.target.files && event.target.files[0])}
                                                 />
                                             </FormControl>
                                             <FormMessage />
