@@ -55,9 +55,11 @@ export function useDoc<T = any>(
       return;
     }
 
+    // Clear previous data and set loading to true when the docRef changes.
+    // This prevents rendering with stale data from a previous document.
+    setData(null);
     setIsLoading(true);
     setError(null);
-    // Optional: setData(null); // Clear previous data instantly
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
