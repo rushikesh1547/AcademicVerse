@@ -28,22 +28,32 @@ export default function DashboardRedirectPage() {
       return;
     }
 
+    let role = 'student'; // Default role
+
     if (userData) {
-      switch (userData.role) {
-        case 'teacher':
-          router.replace('/dashboard/teacher');
-          break;
-        case 'admin':
-          router.replace('/dashboard/admin');
-          break;
-        case 'student':
-        default:
-          router.replace('/dashboard/student');
-          break;
+      // If user document exists, it's the source of truth
+      role = userData.role;
+    } else if (user && user.email) {
+      // Fallback for new users before document is created/replicated.
+      // This logic MUST match the role creation logic in FirebaseProvider.
+      if (user.email.endsWith('@teacher.com')) {
+        role = 'teacher';
+      } else if (user.email === 'user@admin.com') {
+        role = 'admin';
       }
-    } else if (!isUserLoading && !isUserDataLoading) {
-        // If user is loaded but no data, might be new user, default to student
+    }
+
+    switch (role) {
+      case 'teacher':
+        router.replace('/dashboard/teacher');
+        break;
+      case 'admin':
+        router.replace('/dashboard/admin');
+        break;
+      case 'student':
+      default:
         router.replace('/dashboard/student');
+        break;
     }
 
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
