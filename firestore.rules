@@ -68,14 +68,16 @@ service cloud.firestore {
      * Checks if the requesting user has the 'teacher' role.
      */
     function isTeacher() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+        let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+        return isSignedIn() && userDoc != null && userDoc.data.role == 'teacher';
     }
 
     /**
      * Checks if the requesting user has the 'admin' role.
      */
     function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+        return isSignedIn() && userDoc != null && userDoc.data.role == 'admin';
     }
 
     // --------------------------------
