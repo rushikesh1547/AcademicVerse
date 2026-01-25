@@ -66,18 +66,36 @@ service cloud.firestore {
 
     /**
      * Checks if the requesting user has the 'teacher' role.
+     * Prioritizes the role from the user document, but falls back to checking
+     * the email format to handle race conditions during user creation.
      */
     function isTeacher() {
-        let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-        return isSignedIn() && userDoc != null && userDoc.data.role == 'teacher';
+      if (!isSignedIn()) {
+        return false;
+      }
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      if (userDoc != null) {
+        return userDoc.data.role == 'teacher';
+      }
+      // Fallback for user creation race condition
+      return request.auth.token.email != null && request.auth.token.email.matches('.*@teacher\\.com$');
     }
 
     /**
      * Checks if the requesting user has the 'admin' role.
+     * Prioritizes the role from the user document, but falls back to checking
+     * the email to handle race conditions during user creation.
      */
     function isAdmin() {
-        let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-        return isSignedIn() && userDoc != null && userDoc.data.role == 'admin';
+      if (!isSignedIn()) {
+        return false;
+      }
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      if (userDoc != null) {
+        return userDoc.data.role == 'admin';
+      }
+      // Fallback for user creation race condition
+      return request.auth.token.email == 'user@admin.com';
     }
 
     // --------------------------------
@@ -295,3 +313,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
