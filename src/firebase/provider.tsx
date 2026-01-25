@@ -92,9 +92,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               if (firebaseUser.email.endsWith('@teacher.com')) {
                 role = 'teacher';
                 defaultDisplayName = 'New Teacher';
-              } else if (firebaseUser.email === 'admin@example.com') {
+              } else if (firebaseUser.email === 'user@admin.com') {
                 role = 'admin';
-                defaultDisplayName = 'New Admin';
+                defaultDisplayName = 'Admin User';
               }
             }
 
