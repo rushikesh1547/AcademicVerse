@@ -880,14 +880,18 @@
         }
       },
       {
-        "path": "hallTickets/{hallTicketId}",
+        "path": "users/{userId}/hallTickets/{hallTicketId}",
         "definition": {
           "entityName": "HallTicket",
           "schema": {
             "$ref": "#/backend/entities/HallTicket"
           },
-          "description": "Stores hall tickets uploaded by teachers for students.",
+          "description": "Stores hall tickets uploaded by teachers for students. Path based ownership.",
           "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
             {
               "name": "hallTicketId",
               "description": "The unique identifier of the hall ticket."

@@ -57,7 +57,7 @@ function UploadHallTicketDialog({ form }: { form: any }) {
             const snapshot = await uploadBytes(storageRef, file);
             const hallTicketUrl = await getDownloadURL(snapshot.ref);
 
-            await addDocumentNonBlocking(collection(firestore, 'hallTickets'), {
+            await addDocumentNonBlocking(collection(firestore, 'users', form.studentId, 'hallTickets'), {
                 studentId: form.studentId,
                 studentName: form.studentName,
                 examFormId: form.id,

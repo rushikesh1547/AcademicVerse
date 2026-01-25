@@ -19,14 +19,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2, Ticket, Download } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
+import { collection, query, orderBy } from "firebase/firestore";
 
 export default function HallTicketPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
   const hallTicketsQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'hallTickets'), where('studentId', '==', user.uid), orderBy('uploadedAt', 'desc')) : null,
+    () => user ? query(collection(firestore, 'users', user.uid, 'hallTickets'), orderBy('uploadedAt', 'desc')) : null,
     [user, firestore]
   );
   const { data: hallTickets, isLoading: isLoadingHallTickets } = useCollection(hallTicketsQuery);

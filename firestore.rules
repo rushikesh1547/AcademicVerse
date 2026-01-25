@@ -236,17 +236,6 @@ service cloud.firestore {
       allow delete: if isExistingDoc() && resource.data.studentId == request.auth.uid && resource.data.approvalStatus == 'Pending';
     }
 
-    /**
-     * @description Manages hall ticket access and creation.
-     * @path /hallTickets/{hallTicketId}
-     */
-    match /hallTickets/{hallTicketId} {
-      allow get: if isTeacher() || (isExistingDoc() && resource.data.studentId == request.auth.uid);
-      allow list: if isTeacher() || (isSignedIn() && request.query.where.studentId == request.auth.uid);
-      allow create: if isTeacher();
-      allow update, delete: if false;
-    }
-
     // --------------------------------
     // Student-Owned Document Rules
     // --------------------------------
@@ -265,6 +254,19 @@ service cloud.firestore {
      */
     match /users/{userId}/gradeCards/{gradeCardId} {
       allow read, write: if isOwner(userId);
+    }
+
+    /**
+     * @description Hall tickets are created by teachers, but owned and read by students.
+     * @path /users/{userId}/hallTickets/{hallTicketId}
+     */
+    match /users/{userId}/hallTickets/{hallTicketId} {
+      // Students can read their own hall tickets.
+      allow get, list: if isOwner(userId);
+      // Teachers can create (upload) hall tickets for any student.
+      allow create: if isTeacher();
+      // No one can update or delete from the client.
+      allow update, delete: if false;
     }
 
     /**
