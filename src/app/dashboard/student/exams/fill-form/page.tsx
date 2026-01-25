@@ -224,6 +224,7 @@ export default function FillExamFormPage() {
                                             <FormControl>
                                                 <Input
                                                     {...fieldProps}
+                                                    value={undefined}
                                                     type="file"
                                                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                                     onChange={(event) => onChange(event.target.files && event.target.files[0])}
