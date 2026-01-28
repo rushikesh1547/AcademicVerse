@@ -14,6 +14,7 @@ import {
   User,
   ShieldAlert,
   Ticket,
+  Book,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -27,7 +28,14 @@ import { Button } from '@/components/ui/button';
 const navItems = [
   { href: '/dashboard/student', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/student/profile', icon: User, label: 'Profile' },
-  { href: '/dashboard/student/attendance', icon: BarChart3, label: 'Attendance' },
+  {
+    label: 'Academics',
+    icon: BookOpen,
+    subItems: [
+        { href: '/dashboard/student/academics/lesson-plan', icon: Book, label: 'Lesson Plan' },
+        { href: '/dashboard/student/attendance', icon: BarChart3, label: 'Attendance' },
+    ]
+  },
   { href: '/dashboard/student/quizzes', icon: ClipboardCheck, label: 'Quizzes' },
   { href: '/dashboard/student/assignments', icon: FileText, label: 'Assignments' },
   { href: '/dashboard/student/resources', icon: BookOpen, label: 'Resources' },

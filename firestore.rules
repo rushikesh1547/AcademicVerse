@@ -178,6 +178,16 @@ service cloud.firestore {
     // --------------------------------
 
     /**
+     * @description Lesson plans are readable by any authenticated user. Only the creating teacher can write.
+     * @path /lessonPlans/{lessonPlanId}
+     */
+    match /lessonPlans/{lessonPlanId} {
+      allow get, list: if isSignedIn();
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isExistingDoc() && resource.data.teacherId == request.auth.uid;
+    }
+
+    /**
      * @description Quizzes are readable by any authenticated user. Only the creating teacher can write.
      * @path /quizzes/{quizId}
      */

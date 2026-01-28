@@ -746,6 +746,56 @@
         "deliveryChannels",
         "timestamp"
       ]
+    },
+    "LessonPlan": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LessonPlan",
+      "type": "object",
+      "description": "Represents a lesson plan uploaded by a teacher.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LessonPlan entity."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to Teacher who created the lesson plan."
+        },
+        "teacherName": {
+            "type": "string",
+            "description": "Denormalized name of the teacher who uploaded the plan."
+        },
+        "subject": {
+            "type": "string",
+            "description": "The subject of the lesson plan."
+        },
+        "title": {
+            "type": "string",
+            "description": "The title of the lesson plan."
+        },
+        "description": {
+            "type": "string",
+            "description": "The description of the lesson plan."
+        },
+        "fileUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL to the lesson plan file (e.g., PDF, DOCX)."
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teacherId",
+        "teacherName",
+        "subject",
+        "title",
+        "fileUrl",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -965,6 +1015,22 @@
             {
               "name": "resourceId",
               "description": "The unique identifier of the resource."
+            }
+          ]
+        }
+      },
+      {
+        "path": "lessonPlans/{lessonPlanId}",
+        "definition": {
+          "entityName": "LessonPlan",
+          "schema": {
+            "$ref": "#/backend/entities/LessonPlan"
+          },
+          "description": "Stores lesson plans uploaded by teachers. Students can read, teachers can manage their own.",
+          "params": [
+            {
+              "name": "lessonPlanId",
+              "description": "The unique identifier of the lesson plan."
             }
           ]
         }

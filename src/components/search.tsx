@@ -12,6 +12,7 @@ const searchablePages = [
     // Student
     { href: '/dashboard/student', label: 'Student Dashboard' },
     { href: '/dashboard/student/profile', label: 'Profile' },
+    { href: '/dashboard/student/academics/lesson-plan', label: 'Lesson Plan' },
     { href: '/dashboard/student/attendance', label: 'Attendance' },
     { href: '/dashboard/student/quizzes', label: 'Quizzes' },
     { href: '/dashboard/student/assignments', label: 'Assignments' },
@@ -24,6 +25,7 @@ const searchablePages = [
     { href: '/dashboard/teacher', label: 'Teacher Dashboard' },
     { href: '/dashboard/teacher/profile', label: 'Teacher Profile' },
     { href: '/dashboard/teacher/attendance', label: 'Manage Attendance' },
+    { href: '/dashboard/teacher/academics/lesson-plan', label: 'Manage Lesson Plan' },
     { href: '/dashboard/teacher/assignments', label: 'Manage Assignments' },
     { href: '/dashboard/teacher/quizzes', label: 'Manage Quizzes' },
 
