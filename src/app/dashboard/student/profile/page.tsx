@@ -129,6 +129,7 @@ function UploadDocumentDialog({ userId, docType, docName, currentUrl }: { userId
                     </Button>
                 </DialogFooter>
             </DialogContent>
+        </Dialog>
     );
 }
 
