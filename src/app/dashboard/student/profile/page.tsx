@@ -38,6 +38,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Link from 'next/link';
 import { Download, User, Camera, Loader2, Pencil, CheckCircle, Upload, FileUp, Eye } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp } from '@/firebase';
@@ -52,14 +59,29 @@ import { detectFaces } from '@/ai/ai-face-detection';
 const ENROLLMENT_STEPS = ['Front View', 'Left Profile', 'Right Profile'];
 
 const profileFormSchema = z.object({
+  // Personal
+  dateOfBirth: z.string().optional(),
+  gender: z.string().optional(),
+  bloodGroup: z.string().optional(),
+  nationality: z.string().optional(),
+  // Academic
+  enrollmentNumber: z.string().optional(),
+  branch: z.string().optional(),
+  currentYear: z.coerce.number().optional(),
+  admissionDate: z.string().optional(),
+  admissionCategory: z.string().optional(),
+  // Contact
+  mobileNumber: z.string().optional(),
+  alternateEmail: z.string().email({ message: "Please enter a valid email."}).optional().or(z.literal('')),
   currentAddress: z.string().optional(),
   permanentAddress: z.string().optional(),
+  // Identity
   aadharNumber: z.string().length(12, { message: "Aadhar number must be 12 digits."}).optional().or(z.literal('')),
+  // Parents
   fatherName: z.string().optional(),
   fatherOccupation: z.string().optional(),
   motherName: z.string().optional(),
   motherOccupation: z.string().optional(),
-  panCard: z.string().optional(),
 });
 
 type DocumentType = 'collegeIdCardUrl' | 'casteCertificateUrl' | 'casteValidityUrl' | 'capOrManagementCertificateUrl' | 'pwdCertificateUrl' | 'panCardUrl';
@@ -149,6 +171,17 @@ export default function ProfilePage() {
   const form = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
+        dateOfBirth: '',
+        gender: '',
+        bloodGroup: '',
+        nationality: '',
+        enrollmentNumber: '',
+        branch: '',
+        currentYear: undefined,
+        admissionDate: '',
+        admissionCategory: '',
+        mobileNumber: '',
+        alternateEmail: '',
         currentAddress: '',
         permanentAddress: '',
         aadharNumber: '',
@@ -156,13 +189,23 @@ export default function ProfilePage() {
         fatherOccupation: '',
         motherName: '',
         motherOccupation: '',
-        panCard: '',
     },
   });
 
   useEffect(() => {
     if (userData) {
       form.reset({
+        dateOfBirth: userData.dateOfBirth || '',
+        gender: userData.gender || '',
+        bloodGroup: userData.bloodGroup || '',
+        nationality: userData.nationality || '',
+        enrollmentNumber: userData.enrollmentNumber || '',
+        branch: userData.branch || '',
+        currentYear: userData.currentYear || undefined,
+        admissionDate: userData.admissionDate || '',
+        admissionCategory: userData.admissionCategory || '',
+        mobileNumber: userData.mobileNumber || '',
+        alternateEmail: userData.alternateEmail || '',
         currentAddress: userData.currentAddress || '',
         permanentAddress: userData.permanentAddress || '',
         aadharNumber: userData.aadharNumber || '',
@@ -170,7 +213,6 @@ export default function ProfilePage() {
         fatherOccupation: userData.fatherOccupation || '',
         motherName: userData.motherName || '',
         motherOccupation: userData.motherOccupation || '',
-        panCard: userData.panCardUrl ? 'Uploaded' : '', // Simplified for form state
       });
     }
   }, [userData, form]);
@@ -587,12 +629,165 @@ export default function ProfilePage() {
                 <CardHeader>
                     <CardTitle>Detailed Information</CardTitle>
                     <CardDescription>
-                        Provide your personal, parent, and identity details.
+                        Provide your personal, academic, and other details.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
+
+                    <fieldset className="space-y-4">
+                        <legend className="text-lg font-medium">Personal Information</legend>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="dateOfBirth"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Date of Birth</FormLabel>
+                                        <FormControl><Input type="date" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="gender"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Gender</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Male">Male</SelectItem>
+                                                <SelectItem value="Female">Female</SelectItem>
+                                                <SelectItem value="Other">Other</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="bloodGroup"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Blood Group</FormLabel>
+                                        <FormControl><Input placeholder="e.g., O+" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="nationality"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nationality</FormLabel>
+                                        <FormControl><Input placeholder="e.g., Indian" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </fieldset>
+                    
+                    <Separator />
+
+                    <fieldset className="space-y-4">
+                        <legend className="text-lg font-medium">Academic Information</legend>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="enrollmentNumber"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Enrollment Number</FormLabel>
+                                        <FormControl><Input placeholder="Your student enrollment ID" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="branch"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Branch / Department</FormLabel>
+                                        <FormControl><Input placeholder="e.g., Computer Engineering" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="currentYear"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Current Year</FormLabel>
+                                        <FormControl><Input type="number" placeholder="e.g., 2" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="admissionDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Admission Date</FormLabel>
+                                        <FormControl><Input type="date" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="admissionCategory"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Admission Category</FormLabel>
+                                        <FormControl><Input placeholder="e.g., General" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </fieldset>
+
+                    <Separator />
+
                     <fieldset className="space-y-4">
                         <legend className="text-lg font-medium">Contact Information</legend>
+                         <div className="grid md:grid-cols-2 gap-4">
+                             <FormField
+                                control={form.control}
+                                name="mobileNumber"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Mobile Number</FormLabel>
+                                        <FormControl><Input type="tel" placeholder="Your 10-digit mobile number" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="alternateEmail"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Alternate Email</FormLabel>
+                                        <FormControl><Input type="email" placeholder="Your alternate email address" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
                          <FormField
                             control={form.control}
                             name="currentAddress"
@@ -620,24 +815,9 @@ export default function ProfilePage() {
                             )}
                         />
                     </fieldset>
+
                     <Separator />
-                     <fieldset className="space-y-4">
-                        <legend className="text-lg font-medium">Identity Information</legend>
-                        <FormField
-                            control={form.control}
-                            name="aadharNumber"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Aadhar Number</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="Enter 12-digit Aadhar number" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </fieldset>
-                    <Separator />
+
                     <fieldset className="space-y-4">
                          <legend className="text-lg font-medium">Parent's Details</legend>
                          <div className="grid md:grid-cols-2 gap-4">
@@ -689,6 +869,26 @@ export default function ProfilePage() {
                             />
                          </div>
                     </fieldset>
+
+                    <Separator />
+                    
+                     <fieldset className="space-y-4">
+                        <legend className="text-lg font-medium">Identity Information</legend>
+                        <FormField
+                            control={form.control}
+                            name="aadharNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Aadhar Number</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Enter 12-digit Aadhar number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </fieldset>
+                    
                 </CardContent>
                 <CardFooter>
                     <Button type="submit" disabled={isSaving}>

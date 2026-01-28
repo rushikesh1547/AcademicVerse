@@ -41,6 +41,54 @@
             "format": "uri"
           }
         },
+        "dateOfBirth": {
+          "type": "string",
+          "format": "date",
+          "description": "The user's date of birth."
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["Male", "Female", "Other"],
+          "description": "The user's gender."
+        },
+        "bloodGroup": {
+          "type": "string",
+          "description": "The user's blood group."
+        },
+        "nationality": {
+          "type": "string",
+          "description": "The user's nationality."
+        },
+        "mobileNumber": {
+          "type": "string",
+          "description": "The user's mobile phone number."
+        },
+        "alternateEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "An alternate email address for the user."
+        },
+        "enrollmentNumber": {
+          "type": "string",
+          "description": "The user's unique student enrollment number."
+        },
+        "branch": {
+          "type": "string",
+          "description": "The academic branch or department (e.g., Computer Science, Mechanical Engineering)."
+        },
+        "currentYear": {
+          "type": "number",
+          "description": "The user's current year of study."
+        },
+        "admissionDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The date the user was admitted."
+        },
+        "admissionCategory": {
+          "type": "string",
+          "description": "The category under which the user was admitted (e.g., General, Reserved, Management Quota)."
+        },
         "currentAddress": {
           "type": "string",
           "description": "The user's current residential address."
