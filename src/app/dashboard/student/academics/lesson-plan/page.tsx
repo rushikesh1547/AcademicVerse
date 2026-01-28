@@ -17,17 +17,20 @@ import {
 import { Book, Eye, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
 
 export default function LessonPlanPage() {
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
   
   const lessonPlansQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'lessonPlans'), orderBy('createdAt', 'desc')),
-    [firestore]
+    !isUserLoading && user ? query(collection(firestore, 'lessonPlans'), orderBy('createdAt', 'desc')) : null,
+    [firestore, user, isUserLoading]
   );
-  const { data: lessonPlans, isLoading } = useCollection(lessonPlansQuery);
+  const { data: lessonPlans, isLoading: isLoadingLessonPlans } = useCollection(lessonPlansQuery);
+
+  const isLoading = isUserLoading || isLoadingLessonPlans;
 
   return (
     <Card>
