@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +14,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -23,10 +26,20 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, User, Camera, Loader2, Pencil, CheckCircle, Upload } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
+import { Download, User, Camera, Loader2, Pencil, CheckCircle, Upload, FileUp, Eye } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useFirebaseApp } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -37,6 +50,87 @@ import { Progress } from '@/components/ui/progress';
 import { detectFaces } from '@/ai/ai-face-detection';
 
 const ENROLLMENT_STEPS = ['Front View', 'Left Profile', 'Right Profile'];
+
+const profileFormSchema = z.object({
+  currentAddress: z.string().optional(),
+  permanentAddress: z.string().optional(),
+  aadharNumber: z.string().length(12, { message: "Aadhar number must be 12 digits."}).optional().or(z.literal('')),
+  fatherName: z.string().optional(),
+  fatherOccupation: z.string().optional(),
+  motherName: z.string().optional(),
+  motherOccupation: z.string().optional(),
+  panCard: z.string().optional(),
+});
+
+type DocumentType = 'collegeIdCardUrl' | 'casteCertificateUrl' | 'casteValidityUrl' | 'capOrManagementCertificateUrl' | 'pwdCertificateUrl' | 'panCardUrl';
+
+const documentsToUpload: { docType: DocumentType; docName: string }[] = [
+    { docType: 'collegeIdCardUrl', docName: 'College ID Card' },
+    { docType: 'casteCertificateUrl', docName: 'Caste Certificate' },
+    { docType: 'casteValidityUrl', docName: 'Caste Validity Certificate' },
+    { docType: 'capOrManagementCertificateUrl', docName: 'CAP/Management Certificate' },
+    { docType: 'pwdCertificateUrl', docName: 'PWD Certificate (if applicable)' },
+    { docType: 'panCardUrl', docName: 'PAN Card' },
+];
+
+function UploadDocumentDialog({ userId, docType, docName, currentUrl }: { userId: string, docType: DocumentType, docName: string, currentUrl?: string }) {
+    const [file, setFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const { toast } = useToast();
+    const firebaseApp = useFirebaseApp();
+    const userDocRef = doc(useFirestore(), 'users', userId);
+
+    const handleUpload = async () => {
+        if (!file) {
+            toast({ title: "No file selected", variant: "destructive" });
+            return;
+        }
+
+        setIsUploading(true);
+        const storage = getStorage(firebaseApp);
+        const storageRef = ref(storage, `documents/${userId}/${docType}/${file.name}`);
+
+        try {
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            await updateDocumentNonBlocking(userDocRef, { [docType]: downloadURL });
+            
+            toast({ title: "Upload Successful!", description: `${docName} has been uploaded.` });
+            document.getElementById(`close-dialog-${docType}`)?.click();
+        } catch (error) {
+            console.error("Error uploading document:", error);
+            toast({ title: "Upload Failed", description: "There was an error uploading your document.", variant: "destructive" });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm"><FileUp className="mr-2 h-4 w-4" />Upload</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Upload {docName}</DialogTitle>
+                    <DialogDescription>Select a file to upload. This will replace any existing file.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <Label htmlFor="doc-file">Document File</Label>
+                    <Input id="doc-file" type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                    {currentUrl && <p className="text-xs text-muted-foreground">An existing file will be overwritten.</p>}
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button id={`close-dialog-${docType}`} variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={handleUpload} disabled={isUploading}>
+                        {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Upload File
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+    );
+}
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -50,6 +144,37 @@ export default function ProfilePage() {
     [user, firestore]
   );
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
+  const form = useForm<z.infer<typeof profileFormSchema>>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+        currentAddress: '',
+        permanentAddress: '',
+        aadharNumber: '',
+        fatherName: '',
+        fatherOccupation: '',
+        motherName: '',
+        motherOccupation: '',
+        panCard: '',
+    },
+  });
+
+  useEffect(() => {
+    if (userData) {
+      form.reset({
+        currentAddress: userData.currentAddress || '',
+        permanentAddress: userData.permanentAddress || '',
+        aadharNumber: userData.aadharNumber || '',
+        fatherName: userData.fatherName || '',
+        fatherOccupation: userData.fatherOccupation || '',
+        motherName: userData.motherName || '',
+        motherOccupation: userData.motherOccupation || '',
+        panCard: userData.panCardUrl ? 'Uploaded' : '', // Simplified for form state
+      });
+    }
+  }, [userData, form]);
+
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [openEnrollDialog, setOpenEnrollDialog] = useState(false);
@@ -62,9 +187,6 @@ export default function ProfilePage() {
   const [openUploadPhotoDialog, setOpenUploadPhotoDialog] = useState(false);
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-
-  const attendanceSummary: any[] = [];
-  const assignments: any[] = [];
 
   useEffect(() => {
     if (!isUserLoading && !isUserDataLoading) {
@@ -238,11 +360,33 @@ export default function ProfilePage() {
       setIsUploadingPhoto(false);
     }
   };
+
+  async function onInfoSubmit(values: z.infer<typeof profileFormSchema>) {
+    if (!userDocRef) return;
+
+    setIsSaving(true);
+    try {
+      await updateDocumentNonBlocking(userDocRef, values);
+      toast({
+        title: "Profile Saved",
+        description: "Your detailed information has been updated.",
+      });
+    } catch (error) {
+      console.error("Error updating profile details:", error);
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description: "There was an error saving your information.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
   
   const isLoading = isUserLoading || isUserDataLoading;
   const isEnrolled = userData?.faceProfileImageUrls && userData.faceProfileImageUrls.length >= ENROLLMENT_STEPS.length;
 
-  if (isLoading || (userData && userData.role !== 'student')) {
+  if (isLoading) {
     return (
         <div className="grid gap-6">
             <Card>
@@ -300,28 +444,23 @@ export default function ProfilePage() {
               <div className="flex w-full md:w-auto flex-wrap gap-2 mt-4 md:mt-0">
                   <Button variant="outline" onClick={() => setOpenEditDialog(true)}>
                       <Pencil className="mr-2 h-4 w-4" />
-                      Edit Profile
+                      Edit Name
                   </Button>
                    <Button variant="outline" onClick={() => setOpenUploadPhotoDialog(true)}>
                         <Upload className="mr-2 h-4 w-4" />
                         Upload Photo
                     </Button>
-                  <Button variant="outline" size="sm" className="ml-auto" disabled>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Grade Card
-                  </Button>
               </div>
             </div>
         </CardContent>
       </Card>
       
-      {/* Edit Profile Dialog */}
       <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
           <DialogContent>
               <DialogHeader>
-                  <DialogTitle>Edit Profile</DialogTitle>
+                  <DialogTitle>Edit Display Name</DialogTitle>
                   <DialogDescription>
-                      Update your display name.
+                      Update your display name. This will be shown across the platform.
                   </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -344,7 +483,6 @@ export default function ProfilePage() {
           </DialogContent>
       </Dialog>
 
-      {/* New Photo Upload Dialog */}
       <Dialog open={openUploadPhotoDialog} onOpenChange={setOpenUploadPhotoDialog}>
           <DialogContent>
               <DialogHeader>
@@ -367,7 +505,6 @@ export default function ProfilePage() {
           </DialogContent>
       </Dialog>
       
-      {/* Face Enrollment Card & Dialog */}
       <Dialog open={openEnrollDialog} onOpenChange={setOpenEnrollDialog}>
         <Card>
             <CardHeader>
@@ -442,75 +579,147 @@ export default function ProfilePage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <Card>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onInfoSubmit)}>
+                <CardHeader>
+                    <CardTitle>Detailed Information</CardTitle>
+                    <CardDescription>
+                        Provide your personal, parent, and identity details.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                    <fieldset className="space-y-4">
+                        <legend className="text-lg font-medium">Contact Information</legend>
+                         <FormField
+                            control={form.control}
+                            name="currentAddress"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Current Address</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="Your current place of residence" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="permanentAddress"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Permanent Address</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="Your permanent home address" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </fieldset>
+                    <Separator />
+                     <fieldset className="space-y-4">
+                        <legend className="text-lg font-medium">Identity Information</legend>
+                        <FormField
+                            control={form.control}
+                            name="aadharNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Aadhar Number</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Enter 12-digit Aadhar number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </fieldset>
+                    <Separator />
+                    <fieldset className="space-y-4">
+                         <legend className="text-lg font-medium">Parent's Details</legend>
+                         <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="fatherName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Father's Name</FormLabel>
+                                        <FormControl><Input placeholder="Father's full name" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="fatherOccupation"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Father's Occupation</FormLabel>
+                                        <FormControl><Input placeholder="Father's occupation" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                         </div>
+                         <div className="grid md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="motherName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Mother's Name</FormLabel>
+                                        <FormControl><Input placeholder="Mother's full name" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="motherOccupation"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Mother's Occupation</FormLabel>
+                                        <FormControl><Input placeholder="Mother's occupation" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                         </div>
+                    </fieldset>
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Details
+                    </Button>
+                </CardFooter>
+            </form>
+        </Form>
+      </Card>
 
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Attendance Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Subject</TableHead>
-                  <TableHead className="text-right">Percentage</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {attendanceSummary.length > 0 ? (
-                  attendanceSummary.map((item, index) => {
-                    const percentage = (item.attended / item.total) * 100;
-                    return (
-                      <TableRow key={index}>
-                        <TableCell>{item.subject}</TableCell>
-                        <TableCell className="text-right">{percentage.toFixed(1)}%</TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={2} className="h-24 text-center">
-                      No attendance records found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Assignment Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Assignment</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assignments.length > 0 ? (
-                  assignments.slice(0, 5).map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.title}</TableCell>
-                      <TableCell className="text-right">{item.status}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={2} className="h-24 text-center">
-                      No assignments found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+            <CardTitle>Document Management</CardTitle>
+            <CardDescription>Upload and manage your required documents.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            {documentsToUpload.map(({ docType, docName }) => (
+                <div key={docType} className="flex items-center justify-between rounded-lg border p-3">
+                    <p className="font-medium text-sm">{docName}</p>
+                    <div className="flex items-center gap-2">
+                         <Button asChild variant="outline" size="sm" disabled={!userData?.[docType]}>
+                            <Link href={userData?.[docType] || '#'} target="_blank" rel="noopener noreferrer">
+                                <Eye className="mr-2 h-4 w-4" />View
+                            </Link>
+                        </Button>
+                        {user && <UploadDocumentDialog userId={user.uid} docType={docType} docName={docName} currentUrl={userData?.[docType]} />}
+                    </div>
+                </div>
+            ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -40,6 +40,64 @@
             "type": "string",
             "format": "uri"
           }
+        },
+        "currentAddress": {
+          "type": "string",
+          "description": "The user's current residential address."
+        },
+        "permanentAddress": {
+          "type": "string",
+          "description": "The user's permanent residential address."
+        },
+        "aadharNumber": {
+          "type": "string",
+          "description": "The user's 12-digit Aadhar number."
+        },
+        "fatherName": {
+          "type": "string",
+          "description": "The name of the user's father."
+        },
+        "fatherOccupation": {
+          "type": "string",
+          "description": "The occupation of the user's father."
+        },
+        "motherName": {
+          "type": "string",
+          "description": "The name of the user's mother."
+        },
+        "motherOccupation": {
+          "type": "string",
+          "description": "The occupation of the user's mother."
+        },
+        "collegeIdCardUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's uploaded college ID card."
+        },
+        "casteCertificateUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's uploaded caste certificate."
+        },
+        "casteValidityUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's uploaded caste validity certificate."
+        },
+        "capOrManagementCertificateUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's uploaded CAP or management certificate."
+        },
+        "pwdCertificateUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's uploaded PWD certificate."
+        },
+        "panCardUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's uploaded PAN card."
         }
       },
       "required": [
