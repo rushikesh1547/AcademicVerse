@@ -90,7 +90,7 @@ export function SearchBar() {
             <Input
             type="search"
             placeholder="Search for a page..."
-            className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
+            className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/2"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -98,7 +98,7 @@ export function SearchBar() {
             />
         </div>
       {suggestions.length > 0 && (
-        <Card className="absolute top-12 z-50 w-full overflow-hidden rounded-lg border bg-background shadow-md md:w-2/3 lg:w-1/3">
+        <Card className="absolute top-12 z-50 w-full overflow-hidden rounded-lg border bg-background shadow-md md:w-2/3 lg:w-1/2">
           <CardContent className="p-2">
             <ul className="space-y-1">
               {suggestions.map((suggestion) => (

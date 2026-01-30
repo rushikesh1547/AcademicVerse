@@ -8,7 +8,6 @@ import {
   FileText,
   BookOpen,
   Pencil,
-  Bell,
   ArrowRight,
 } from 'lucide-react';
 import {
@@ -62,12 +61,6 @@ const dashboardItems = [
     description: 'Manage exam forms, hall tickets, and results.',
     href: '/dashboard/student/exams',
     icon: Pencil,
-  },
-  {
-    title: 'Notifications',
-    description: 'View important announcements and alerts.',
-    href: '/dashboard/student/notifications',
-    icon: Bell,
   },
 ];
 

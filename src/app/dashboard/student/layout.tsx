@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {
   GraduationCap,
   Menu,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,6 +49,12 @@ export default function StudentDashboardLayout({
         </Sheet>
         <div className="flex items-center gap-4 ml-auto">
             <SearchBar />
+            <Button asChild variant="ghost" size="icon" className="rounded-full">
+                <Link href="/dashboard/student/notifications">
+                    <Bell className="h-5 w-5" />
+                    <span className="sr-only">Notifications</span>
+                </Link>
+            </Button>
             <UserNav key={user?.uid} role="student" />
         </div>
       </header>
