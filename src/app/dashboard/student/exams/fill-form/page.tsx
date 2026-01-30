@@ -51,7 +51,7 @@ const formSchema = z.object({
   subjectIds: z.array(z.string()).refine((value) => value.length > 0, {
     message: "You have to select at least one subject.",
   }),
-  feeReceipt: z.instanceof(File).refine(file => file.size > 0, 'Fee receipt is required.'),
+  feeReceipt: z.any().refine(file => file, 'Fee receipt is required.'),
 });
 
 const STEPS = [

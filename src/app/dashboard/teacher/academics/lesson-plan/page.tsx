@@ -55,7 +55,7 @@ const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
   subject: z.string().min(2, 'Subject is required.'),
   description: z.string().optional(),
-  file: z.instanceof(File).refine(file => file.size > 0, 'A file is required.'),
+  file: z.any().refine(file => file, 'A file is required.'),
 });
 
 export default function ManageLessonPlanPage() {

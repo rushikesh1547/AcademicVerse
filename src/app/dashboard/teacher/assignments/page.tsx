@@ -57,7 +57,7 @@ const formSchema = z.object({
   subject: z.string().min(2, 'Subject is required.'),
   description: z.string().optional(),
   dueDate: z.string().min(1, 'Due date is required.'),
-  file: z.instanceof(File).optional(),
+  file: z.any().optional(),
 });
 
 export default function CreateAssignmentPage() {
