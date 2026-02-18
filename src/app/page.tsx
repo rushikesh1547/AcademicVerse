@@ -190,7 +190,7 @@ export default function AuthPage() {
       className="w-full flex items-center justify-center min-h-screen bg-cover bg-center bg-no-repeat"
       style={{
         backgroundImage:
-          "url('https://images.unsplash.com/photo-1562774053-62fd68b32147?q=80&w=2070&auto=format&fit=crop')",
+          "url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=2070&auto=format&fit=crop')",
       }}
     >
       <div className="absolute inset-0 bg-black/60 z-0" />
