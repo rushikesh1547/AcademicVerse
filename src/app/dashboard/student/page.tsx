@@ -73,7 +73,7 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {dashboardItems.map((item) => (
           <Link href={item.href} key={item.title} className="group">
-            <Card className="flex flex-col h-full hover:border-primary transition-colors">
+            <Card className="flex flex-col h-full hover:border-primary transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
               <CardHeader>
                 <div className="flex items-center gap-4">
                   <item.icon className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />

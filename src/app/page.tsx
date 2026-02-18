@@ -186,13 +186,20 @@ export default function AuthPage() {
   );
 
   return (
-    <div className="w-full flex items-center justify-center min-h-screen">
-      <div className="mx-auto grid w-[380px] gap-6">
+    <main
+      className="w-full flex items-center justify-center min-h-screen bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage:
+          "url('https://images.unsplash.com/photo-1562774053-62fd68b32147?q=80&w=2070&auto=format&fit=crop')",
+      }}
+    >
+      <div className="absolute inset-0 bg-black/60 z-0" />
+      <div className="z-10 mx-auto grid w-[380px] gap-6">
         <div className="grid gap-2 text-center">
-          <h1 className="text-4xl font-headline font-bold text-primary">
+          <h1 className="text-4xl font-headline font-bold text-white">
             AcademicVerse
           </h1>
-          <p className="text-balance text-muted-foreground">
+          <p className="text-balance text-gray-200">
             Login or create an account to get started
           </p>
         </div>
@@ -203,7 +210,7 @@ export default function AuthPage() {
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
-            <Card>
+            <Card className="bg-background/80 backdrop-blur-sm border-white/20">
               <CardHeader>
                 <CardTitle className="text-2xl">Login</CardTitle>
                 <CardDescription>
@@ -260,7 +267,7 @@ export default function AuthPage() {
             </Card>
           </TabsContent>
           <TabsContent value="signup">
-            <Card>
+            <Card className="bg-background/80 backdrop-blur-sm border-white/20">
               <CardHeader>
                 <CardTitle className="text-2xl">Sign Up</CardTitle>
                 <CardDescription>
@@ -322,15 +329,15 @@ export default function AuthPage() {
         </Tabs>
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
+            <span className="w-full border-t border-white/20" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
+            <span className="bg-transparent px-2 text-gray-300">
               Or continue with
             </span>
           </div>
         </div>
-        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+        <Button variant="outline" className="w-full bg-background/80 backdrop-blur-sm border-white/20" onClick={handleGoogleSignIn} disabled={isLoading}>
           {isLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
@@ -339,6 +346,6 @@ export default function AuthPage() {
           Google
         </Button>
       </div>
-    </div>
+    </main>
   );
 }
