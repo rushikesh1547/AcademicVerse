@@ -35,7 +35,7 @@ const FaceVerificationOutputSchema = z.object({
   confidence: z
     .number()
     .describe(
-      'A confidence score between 0 and 1, where 1 is a perfect match.'
+      'A confidence score between 0 and 1, where 1 is a perfect, undeniable match.'
     ),
     reason: z
     .string()
