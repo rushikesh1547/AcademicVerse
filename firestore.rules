@@ -254,7 +254,13 @@ service cloud.firestore {
      * @path /feedbacks/{feedbackId}
      */
     match /feedbacks/{feedbackId} {
-      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow create: if isSignedIn()
+                    && request.resource.data.studentId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['studentId', 'teacherId', 'teacherName', 'subject', 'questionAnswers', 'createdAt'])
+                    && request.resource.data.teacherId is string
+                    && request.resource.data.subject is string
+                    && request.resource.data.questionAnswers is list
+                    && request.resource.data.createdAt == request.time;
       allow get: if isSignedIn() && (isExistingDoc() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid));
       allow list: if false; // Must be queried, not listed directly
       allow update, delete: if false;
