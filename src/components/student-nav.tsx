@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   Ticket,
   Book,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -48,6 +49,7 @@ const navItems = [
       { href: '/dashboard/student/results', icon: Award, label: 'Results' },
     ],
   },
+  { href: '/dashboard/student/feedback', icon: MessageSquare, label: 'Feedback' },
   { href: '/dashboard/student/notifications', icon: Bell, label: 'Notifications' },
   { href: '/dashboard/proctoring', icon: ShieldAlert, label: 'AI Proctoring' },
 ];

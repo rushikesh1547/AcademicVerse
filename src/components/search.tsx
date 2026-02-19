@@ -20,6 +20,7 @@ const searchablePages = [
     { href: '/dashboard/student/exams', label: 'Exam Forms' },
     { href: '/dashboard/student/results', label: 'Results' },
     { href: '/dashboard/student/notifications', label: 'Notifications' },
+    { href: '/dashboard/student/feedback', label: 'Submit Feedback' },
     
     // Teacher
     { href: '/dashboard/teacher', label: 'Teacher Dashboard' },
@@ -28,6 +29,8 @@ const searchablePages = [
     { href: '/dashboard/teacher/academics/lesson-plan', label: 'Manage Lesson Plan' },
     { href: '/dashboard/teacher/assignments', label: 'Manage Assignments' },
     { href: '/dashboard/teacher/quizzes', label: 'Manage Quizzes' },
+    { href: '/dashboard/teacher/feedback', label: 'View Feedback' },
+
 
     // Admin
     { href: '/dashboard/admin', label: 'Admin Dashboard' },
@@ -84,13 +87,13 @@ export function SearchBar() {
   }
 
   return (
-    <div className="relative w-full flex-1" ref={searchContainerRef}>
+    <div className="relative w-full flex-1 md:w-auto md:flex-initial" ref={searchContainerRef}>
         <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
             type="search"
             placeholder="Search for a page..."
-            className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/2"
+            className="w-full appearance-none bg-background pl-8 shadow-none md:w-[280px] lg:w-[320px]"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -98,7 +101,7 @@ export function SearchBar() {
             />
         </div>
       {suggestions.length > 0 && (
-        <Card className="absolute top-12 z-50 w-full overflow-hidden rounded-lg border bg-background shadow-md md:w-2/3 lg:w-1/2">
+        <Card className="absolute top-12 z-50 w-full overflow-hidden rounded-lg border bg-background shadow-md md:w-[280px] lg:w-[320px]">
           <CardContent className="p-2">
             <ul className="space-y-1">
               {suggestions.map((suggestion) => (

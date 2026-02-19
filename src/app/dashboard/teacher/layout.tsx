@@ -13,7 +13,8 @@ import {
   Ticket,
   BookOpen,
   Book,
-  ChevronDown
+  ChevronDown,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,6 +49,7 @@ const navItems = [
   },
   { href: '/dashboard/teacher/assignments', icon: FileText, label: 'Assignments' },
   { href: '/dashboard/teacher/quizzes', icon: ClipboardCheck, label: 'Quizzes' },
+  { href: '/dashboard/teacher/feedback', icon: MessageSquare, label: 'Feedback' },
   { href: '/dashboard/teacher/exam-approvals', icon: CheckSquare, label: 'Exam Approvals' },
   { href: '/dashboard/teacher/hall-tickets', icon: Ticket, label: 'Hall Tickets' },
 ];

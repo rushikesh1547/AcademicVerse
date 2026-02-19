@@ -9,6 +9,7 @@ import {
   BookOpen,
   Pencil,
   ArrowRight,
+  MessageSquare,
 } from 'lucide-react';
 import {
   Card,
@@ -61,6 +62,12 @@ const dashboardItems = [
     description: 'Manage exam forms, hall tickets, and results.',
     href: '/dashboard/student/exams',
     icon: Pencil,
+  },
+  {
+    title: 'Feedback',
+    description: 'Provide feedback on subjects and teachers.',
+    href: '/dashboard/student/feedback',
+    icon: MessageSquare,
   },
 ];
 

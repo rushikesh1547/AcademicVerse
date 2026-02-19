@@ -796,6 +796,46 @@
         "fileUrl",
         "createdAt"
       ]
+    },
+    "Feedback": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Feedback",
+      "type": "object",
+      "description": "Represents anonymous feedback submitted by a student for a subject.",
+      "properties": {
+        "studentId": {
+          "type": "string",
+          "description": "Reference to the Student who submitted the feedback (for security rules)."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to the Teacher who teaches the subject."
+        },
+        "teacherName": {
+          "type": "string",
+          "description": "Denormalized name of the teacher for display."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject for which the feedback is given."
+        },
+        "feedback": {
+          "type": "string",
+          "description": "The content of the feedback."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the feedback was submitted."
+        }
+      },
+      "required": [
+        "studentId",
+        "teacherId",
+        "subject",
+        "feedback",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -1031,6 +1071,22 @@
             {
               "name": "lessonPlanId",
               "description": "The unique identifier of the lesson plan."
+            }
+          ]
+        }
+      },
+      {
+        "path": "feedbacks/{feedbackId}",
+        "definition": {
+          "entityName": "Feedback",
+          "schema": {
+            "$ref": "#/backend/entities/Feedback"
+          },
+          "description": "Stores student feedback for subjects. Students can create. Teachers can read feedback for their subjects.",
+          "params": [
+            {
+              "name": "feedbackId",
+              "description": "The unique identifier of the feedback."
             }
           ]
         }

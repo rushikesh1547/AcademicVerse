@@ -249,6 +249,18 @@ service cloud.firestore {
       allow update, delete: if isExistingDoc() && resource.data.uploaderId == request.auth.uid;
     }
 
+    /**
+     * @description Anonymous feedback from students.
+     * @path /feedbacks/{feedbackId}
+     */
+    match /feedbacks/{feedbackId} {
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow get: if isSignedIn() && (isExistingDoc() && (resource.data.studentId == request.auth.uid || resource.data.teacherId == request.auth.uid));
+      allow list: if false; // Must be queried, not listed directly
+      allow update, delete: if false;
+    }
+
+
     // --------------------------------
     // Collection Group Query Rules
     // --------------------------------
@@ -271,6 +283,16 @@ service cloud.firestore {
       allow list: if isTeacher() || isAdmin();
     }
     
+    /**
+     * @description Secure rule for Collection Group queries on 'feedbacks'.
+     * @path /{path=**}/feedbacks/{feedbackId}
+     */
+    match /{path=**}/feedbacks/{feedbackId} {
+      // Students can query their own feedback.
+      // Teachers can query feedback they have received.
+      allow list: if isSignedIn() && (request.query.where[0][2] == request.auth.uid);
+    }
+
     // --------------------------------
     // Student-Owned Document Rules
     // --------------------------------
@@ -323,5 +345,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
