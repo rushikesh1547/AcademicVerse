@@ -14,7 +14,7 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collectionGroup, query, where, orderBy } from 'firebase/firestore';
 import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -23,7 +23,7 @@ export default function TeacherFeedbackPage() {
   const firestore = useFirestore();
 
   const feedbackQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'feedbacks'), where('teacherId', '==', user.uid), orderBy('createdAt', 'desc')) : null,
+    () => user ? query(collectionGroup(firestore, 'feedbacks'), where('teacherId', '==', user.uid), orderBy('createdAt', 'desc')) : null,
     [user, firestore]
   );
   const { data: feedbacks, isLoading: isLoadingFeedbacks } = useCollection(feedbackQuery);

@@ -37,7 +37,7 @@ import {
   useMemoFirebase,
   addDocumentNonBlocking,
 } from '@/firebase';
-import { collection, query, where, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, orderBy, collectionGroup } from 'firebase/firestore';
 import { subjects } from '@/lib/subjects';
 import { useState } from 'react';
 
@@ -61,7 +61,7 @@ export default function StudentFeedbackPage() {
   });
 
   const feedbackQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'feedbacks'), where('studentId', '==', user.uid), orderBy('createdAt', 'desc')) : null,
+    () => user ? query(collectionGroup(firestore, 'feedbacks'), where('studentId', '==', user.uid), orderBy('createdAt', 'desc')) : null,
     [user, firestore]
   );
   const { data: previousFeedbacks, isLoading: isLoadingFeedbacks } = useCollection(feedbackQuery);
