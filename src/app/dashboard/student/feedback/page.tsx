@@ -26,7 +26,7 @@ import {
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from '@/components/ui/button';
 import { Loader2, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -39,11 +39,18 @@ import {
 } from '@/firebase';
 import { collection, query, where, serverTimestamp, orderBy, collectionGroup } from 'firebase/firestore';
 import { subjects } from '@/lib/subjects';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { generateFeedbackQuestions } from '@/ai/ai-feedback-questions';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const formSchema = z.object({
+const feedbackOptions = ["Bad", "Satisfactory", "Good", "Best"];
+
+const createFormSchema = (questions: string[]) => z.object({
   subjectId: z.string({ required_error: 'Please select a subject.' }),
-  feedback: z.string().min(10, 'Feedback must be at least 10 characters.'),
+  answers: z.record(z.string()).refine(
+    (answers) => questions.every((q, index) => !!answers[index]),
+    { message: "Please answer all questions before submitting." }
+  ),
 });
 
 export default function StudentFeedbackPage() {
@@ -51,14 +58,50 @@ export default function StudentFeedbackPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+
+  const formSchema = createFormSchema(questions);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       subjectId: '',
-      feedback: '',
+      answers: {},
     },
   });
+
+  const selectedSubjectId = form.watch('subjectId');
+
+  useEffect(() => {
+    if (selectedSubjectId) {
+      const fetchQuestions = async () => {
+        setIsLoadingQuestions(true);
+        setQuestions([]);
+        form.setValue('answers', {}); 
+        try {
+          const selectedSubject = subjects.find(s => s.id === selectedSubjectId);
+          if (selectedSubject) {
+            const result = await generateFeedbackQuestions({ subjectName: selectedSubject.name });
+            setQuestions(result.questions);
+          }
+        } catch (error) {
+          console.error("Error generating feedback questions:", error);
+          toast({
+            variant: "destructive",
+            title: "Could not load questions",
+            description: "There was an error generating feedback questions for this subject."
+          });
+        } finally {
+          setIsLoadingQuestions(false);
+        }
+      };
+      fetchQuestions();
+    } else {
+      setQuestions([]);
+    }
+  }, [selectedSubjectId, form, toast]);
+
 
   const feedbackQuery = useMemoFirebase(
     () => user ? query(collectionGroup(firestore, 'feedbacks'), where('studentId', '==', user.uid), orderBy('createdAt', 'desc')) : null,
@@ -80,12 +123,17 @@ export default function StudentFeedbackPage() {
 
     setIsSubmitting(true);
 
+    const questionAnswers = questions.map((question, index) => ({
+        question,
+        answer: data.answers[index],
+    }));
+
     const feedbackData = {
       studentId: user.uid,
       teacherId: selectedSubject.teacherId,
       teacherName: selectedSubject.teacherName,
       subject: selectedSubject.name,
-      feedback: data.feedback,
+      questionAnswers,
       createdAt: serverTimestamp(),
     };
     
@@ -93,6 +141,7 @@ export default function StudentFeedbackPage() {
       addDocumentNonBlocking(collection(firestore, 'feedbacks'), feedbackData);
       toast({ title: 'Feedback Submitted', description: 'Thank you for your feedback!' });
       form.reset();
+      setQuestions([]);
     } catch (error) {
       console.error("Error submitting feedback:", error);
       toast({ variant: 'destructive', title: 'Submission Failed', description: 'Could not submit your feedback.' });
@@ -122,10 +171,10 @@ export default function StudentFeedbackPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Subject</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select a subject" />
+                                <SelectValue placeholder="Select a subject to give feedback" />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -140,28 +189,52 @@ export default function StudentFeedbackPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="feedback"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Feedback</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Tell us what you think..."
-                        rows={5}
-                        {...field}
+              {isLoadingQuestions && (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+              )}
+
+              {questions.length > 0 && (
+                <div className="space-y-6 rounded-md border p-4">
+                  {questions.map((question, index) => (
+                     <FormField
+                        key={index}
+                        control={form.control}
+                        name={`answers.${index}`}
+                        render={({ field }) => (
+                          <FormItem className="space-y-3">
+                            <FormLabel>{question}</FormLabel>
+                            <FormControl>
+                              <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="flex flex-wrap gap-x-6 gap-y-2"
+                              >
+                                {feedbackOptions.map(option => (
+                                    <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                                        <FormControl>
+                                            <RadioGroupItem value={option} />
+                                        </FormControl>
+                                        <FormLabel className="font-normal">{option}</FormLabel>
+                                    </FormItem>
+                                ))}
+                              </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  ))}
+                </div>
+              )}
+               <FormMessage>{form.formState.errors.answers?.root?.message}</FormMessage>
+
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isUserLoading || isSubmitting}>
+              <Button type="submit" disabled={isUserLoading || isSubmitting || questions.length === 0}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit
+                Submit Feedback
               </Button>
             </CardFooter>
           </form>
@@ -187,7 +260,18 @@ export default function StudentFeedbackPage() {
                     <p className="text-xs text-muted-foreground mb-2">
                         Submitted on {fb.createdAt?.toDate().toLocaleDateString()}
                     </p>
-                    <p className="text-sm">{fb.feedback}</p>
+                    {fb.questionAnswers ? (
+                         <div className="space-y-2 mt-2">
+                            {fb.questionAnswers.map((qa: any, i: number) => (
+                                <div key={i} className="text-sm">
+                                    <p className="font-medium">{qa.question}</p>
+                                    <p className="text-muted-foreground pl-4">&bull; {qa.answer}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                         <p className="text-sm">{fb.feedback}</p>
+                    )}
                 </div>
               ))}
             </div>

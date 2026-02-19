@@ -801,7 +801,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Feedback",
       "type": "object",
-      "description": "Represents anonymous feedback submitted by a student for a subject.",
+      "description": "Represents anonymous feedback submitted by a student for a subject, based on a set of questions.",
       "properties": {
         "studentId": {
           "type": "string",
@@ -819,9 +819,32 @@
           "type": "string",
           "description": "The subject for which the feedback is given."
         },
-        "feedback": {
-          "type": "string",
-          "description": "The content of the feedback."
+        "questionAnswers": {
+          "type": "array",
+          "description": "An array of questions and the student's corresponding answers.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": {
+                "type": "string",
+                "description": "The feedback question."
+              },
+              "answer": {
+                "type": "string",
+                "description": "The student's answer.",
+                "enum": [
+                  "Bad",
+                  "Good",
+                  "Satisfactory",
+                  "Best"
+                ]
+              }
+            },
+            "required": [
+              "question",
+              "answer"
+            ]
+          }
         },
         "createdAt": {
           "type": "string",
@@ -833,7 +856,7 @@
         "studentId",
         "teacherId",
         "subject",
-        "feedback",
+        "questionAnswers",
         "createdAt"
       ]
     }

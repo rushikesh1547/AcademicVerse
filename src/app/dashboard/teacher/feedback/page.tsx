@@ -17,6 +17,7 @@ import {
 import { collectionGroup, query, where, orderBy } from 'firebase/firestore';
 import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 export default function TeacherFeedbackPage() {
   const { user, isUserLoading } = useUser();
@@ -47,6 +48,20 @@ export default function TeacherFeedbackPage() {
   }, [feedbacks]);
 
   const isLoading = isUserLoading || isLoadingFeedbacks;
+  
+  const getAnswerVariant = (answer: string) => {
+    switch (answer) {
+      case 'Best':
+        return 'default';
+      case 'Good':
+        return 'secondary';
+      case 'Bad':
+        return 'destructive';
+      case 'Satisfactory':
+      default:
+        return 'outline';
+    }
+  };
 
   return (
     <Card>
@@ -79,7 +94,18 @@ export default function TeacherFeedbackPage() {
                                     <p className="text-xs text-muted-foreground mb-2">
                                         Received on {fb.createdAt?.toDate().toLocaleDateString()}
                                     </p>
-                                    <p className="text-sm">{fb.feedback}</p>
+                                     {fb.questionAnswers ? (
+                                        <div className="space-y-3">
+                                            {fb.questionAnswers.map((qa: any, i: number) => (
+                                                <div key={i} className="text-sm">
+                                                    <p className="font-medium">{qa.question}</p>
+                                                    <Badge variant={getAnswerVariant(qa.answer)} className="mt-1">{qa.answer}</Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm">{fb.feedback}</p>
+                                    )}
                                 </div>
                             ))}
                         </div>
