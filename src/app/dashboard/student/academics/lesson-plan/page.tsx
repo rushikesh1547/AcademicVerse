@@ -19,20 +19,47 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LessonPlanPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   
-  // The query is only created once the user's auth state is fully loaded and confirmed.
   const lessonPlansQuery = useMemoFirebase(() => 
-    !isUserLoading && user ? query(collection(firestore, 'lessonPlans'), orderBy('createdAt', 'desc')) : null,
-    [firestore, user, isUserLoading]
+    user ? query(collection(firestore, 'lessonPlans'), orderBy('createdAt', 'desc')) : null,
+    [firestore, user]
   );
   const { data: lessonPlans, isLoading: isLoadingLessonPlans } = useCollection(lessonPlansQuery);
 
-  // The overall loading state depends on both the user auth check and the data fetching.
-  const isLoading = isUserLoading || isLoadingLessonPlans;
+  if (isUserLoading) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Book className="h-6 w-6" />Lesson Plans</CardTitle>
+                <CardDescription>Access lesson plans and academic materials shared by your teachers.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div className="flex items-center justify-center p-6">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+                </div>
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </CardContent>
+        </Card>
+    );
+  }
+
+  if (!user) {
+    return (
+       <Card>
+         <CardHeader>
+            <CardTitle>Unauthorized</CardTitle>
+            <CardDescription>You must be logged in to view lesson plans.</CardDescription>
+         </CardHeader>
+       </Card>
+    )
+  }
 
   return (
     <Card>
@@ -46,7 +73,7 @@ export default function LessonPlanPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {isLoadingLessonPlans ? (
             <div className="flex items-center justify-center p-6">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
             </div>

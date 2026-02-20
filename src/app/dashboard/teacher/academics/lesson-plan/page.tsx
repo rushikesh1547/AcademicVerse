@@ -33,6 +33,7 @@ import {
   useFirebaseApp,
   errorEmitter,
   FirestorePermissionError,
+  addDocumentNonBlocking
 } from '@/firebase';
 import { collection, query, where, serverTimestamp, addDoc, orderBy } from 'firebase/firestore';
 import {
@@ -79,10 +80,10 @@ export default function ManageLessonPlanPage() {
 
   const lessonPlansQuery = useMemoFirebase(
     () =>
-      user
+      !isUserLoading && user
         ? query(collection(firestore, 'lessonPlans'), where('teacherId', '==', user.uid), orderBy('createdAt', 'desc'))
         : null,
-    [user, firestore]
+    [user, firestore, isUserLoading]
   );
   const { data: lessonPlans, isLoading: isLoadingLessonPlans } =
     useCollection(lessonPlansQuery);
@@ -121,8 +122,7 @@ export default function ManageLessonPlanPage() {
             createdAt: serverTimestamp(),
         };
 
-        const lessonPlansCollection = collection(firestore, 'lessonPlans');
-        await addDoc(lessonPlansCollection, lessonPlanData);
+        addDocumentNonBlocking(collection(firestore, 'lessonPlans'), lessonPlanData);
 
         toast({
             title: 'Lesson Plan Uploaded',
