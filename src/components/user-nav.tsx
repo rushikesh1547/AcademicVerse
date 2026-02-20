@@ -18,7 +18,7 @@ import { signOut } from 'firebase/auth';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
-export function UserNav({ role }: { role: 'student' | 'teacher' | 'admin' }) {
+export function UserNav() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
@@ -56,13 +56,12 @@ export function UserNav({ role }: { role: 'student' | 'teacher' | 'admin' }) {
     return <Skeleton className="h-9 w-9 rounded-full" />;
   }
 
-  // Prioritize Firestore data as the source of truth, but fall back to auth data.
-  // This makes the UI more resilient to Firestore latency.
+  const role = userData?.role;
   const userDisplayName = userData?.displayName || user?.displayName || (role === 'admin' ? 'Admin' : 'User');
   const userEmail = userData?.email || user?.email || '';
   const userAvatarUrl = userData?.profileImageUrl || user?.photoURL;
   const fallback = userDisplayName?.charAt(0).toUpperCase() || 'U';
-  const profileUrl = `/dashboard/${role}/profile`;
+  const profileUrl = role ? `/dashboard/${role}/profile` : '/dashboard';
 
   return (
     <DropdownMenu>
@@ -84,7 +83,7 @@ export function UserNav({ role }: { role: 'student' | 'teacher' | 'admin' }) {
           </div>
         </DropdownMenuLabel>
         
-        {role !== 'admin' && (
+        {role && role !== 'admin' && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

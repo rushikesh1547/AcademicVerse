@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   GraduationCap,
@@ -14,7 +16,8 @@ import {
   BookOpen,
   Book,
   ChevronDown,
-  MessageSquare
+  MessageSquare,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,14 +29,14 @@ import { TeacherNav } from '@/components/teacher-nav';
 import { UserNav } from '@/components/user-nav';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { SearchBar } from '@/components/search';
-import { useUser } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -59,10 +62,38 @@ export default function TeacherDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
   const pathname = usePathname();
 
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
+  useEffect(() => {
+    if (isUserLoading || isUserDataLoading) {
+      return;
+    }
+    if (!user) {
+      router.replace('/');
+      return;
+    }
+    if (userData && userData.role !== 'teacher') {
+      router.replace('/dashboard');
+    }
+  }, [user, userData, isUserLoading, isUserDataLoading, router]);
+
   const isSubItemActive = (subItems: any[]) => subItems.some(sub => pathname.startsWith(sub.href));
+
+  const isLoading = isUserLoading || isUserDataLoading;
+
+  if (isLoading || !userData || userData.role !== 'teacher') {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
   
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -117,7 +148,7 @@ export default function TeacherDashboardLayout({
         </Sheet>
         <div className="flex items-center gap-4 ml-auto">
             <SearchBar />
-            <UserNav key={user?.uid} role="teacher" />
+            <UserNav />
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">

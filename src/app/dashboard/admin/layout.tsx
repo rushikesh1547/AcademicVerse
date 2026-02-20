@@ -1,11 +1,14 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   GraduationCap,
   Menu,
   LayoutDashboard,
   Users,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,8 +20,8 @@ import { AdminNav } from '@/components/admin-nav';
 import { UserNav } from '@/components/user-nav';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { SearchBar } from '@/components/search';
-import { useUser } from '@/firebase';
-import { usePathname } from 'next/navigation';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 
@@ -32,8 +35,36 @@ export default function AdminDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
   const pathname = usePathname();
+
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
+  useEffect(() => {
+    if (isUserLoading || isUserDataLoading) {
+      return;
+    }
+    if (!user) {
+      router.replace('/');
+      return;
+    }
+    if (userData && userData.role !== 'admin') {
+      router.replace('/dashboard');
+    }
+  }, [user, userData, isUserLoading, isUserDataLoading, router]);
+
+  const isLoading = isUserLoading || isUserDataLoading;
+
+  if (isLoading || !userData || userData.role !== 'admin') {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
   
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -70,7 +101,7 @@ export default function AdminDashboardLayout({
         </Sheet>
         <div className="flex items-center gap-4 ml-auto">
             <SearchBar />
-            <UserNav key={user?.uid} role="admin" />
+            <UserNav />
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
