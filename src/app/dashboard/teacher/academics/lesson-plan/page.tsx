@@ -55,6 +55,8 @@ import { useState, useRef } from 'react';
 const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
   subject: z.string().min(2, 'Subject is required.'),
+  branch: z.string().min(2, 'Branch is required.'),
+  currentYear: z.coerce.number().min(1, 'Year must be a positive number.'),
   description: z.string().optional(),
   file: z.any().refine(file => file, 'A file is required.'),
 });
@@ -73,6 +75,8 @@ export default function ManageLessonPlanPage() {
     defaultValues: {
       title: '',
       subject: '',
+      branch: '',
+      currentYear: undefined,
       description: '',
       file: undefined,
     },
@@ -115,6 +119,8 @@ export default function ManageLessonPlanPage() {
         const lessonPlanData = {
             title: data.title,
             subject: data.subject,
+            branch: data.branch,
+            currentYear: data.currentYear,
             description: data.description || '',
             fileUrl: downloadURL,
             teacherId: user.uid,
@@ -186,14 +192,42 @@ export default function ManageLessonPlanPage() {
                   </FormItem>
                 )}
               />
-              <FormField
+              <div className="grid md:grid-cols-3 gap-4">
+                <FormField
+                    control={form.control}
+                    name="subject"
+                    render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                        <FormLabel>Subject</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Computer Science" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="currentYear"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Year</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="e.g., 1" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
+               <FormField
                 control={form.control}
-                name="subject"
+                name="branch"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subject</FormLabel>
+                    <FormLabel>Branch</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Computer Science" {...field} />
+                      <Input placeholder="e.g., Computer Engineering" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -43,6 +43,8 @@ import {
 const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
   subject: z.string().min(2, 'Subject is required.'),
+  branch: z.string().min(2, 'Branch is required.'),
+  currentYear: z.coerce.number().min(1, 'Year must be a positive number.'),
   duration: z.coerce.number().min(1, 'Duration must be at least 1 minute.'),
 });
 
@@ -56,6 +58,8 @@ export default function CreateQuizPage() {
     defaultValues: {
       title: '',
       subject: '',
+      branch: '',
+      currentYear: undefined,
       duration: 10,
     },
   });
@@ -134,6 +138,34 @@ export default function CreateQuizPage() {
                   </FormItem>
                 )}
               />
+              <div className="grid md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="branch"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Branch</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Computer Engineering" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="currentYear"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Year</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="duration"

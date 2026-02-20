@@ -17,13 +17,29 @@ import {
 import { BookOpen, Download, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
 
 export default function ResourcesPage() {
   const firestore = useFirestore();
-  const resourcesQuery = useMemoFirebase(() => collection(firestore, 'resources'), [firestore]);
-  const { data: resources, isLoading } = useCollection(resourcesQuery);
+  const { user } = useUser();
+
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
+  const resourcesQuery = useMemoFirebase(() => 
+    userData?.branch && userData?.currentYear
+      ? query(
+          collection(firestore, 'resources'),
+          where('branch', '==', userData.branch),
+          where('currentYear', '==', userData.currentYear)
+        )
+      : null,
+    [firestore, userData]
+  );
+  const { data: resources, isLoading: isLoadingResources } = useCollection(resourcesQuery);
+
+  const isLoading = isUserDataLoading || isLoadingResources;
 
   return (
     <Card>
@@ -33,7 +49,7 @@ export default function ResourcesPage() {
           Resources
         </CardTitle>
         <CardDescription>
-          Access academic materials shared by your teachers.
+          Access academic materials for your branch and year.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -56,7 +72,7 @@ export default function ResourcesPage() {
                 <TableRow key={resource.id}>
                     <TableCell className="font-medium">{resource.title}</TableCell>
                     <TableCell>{resource.subject}</TableCell>
-                    <TableCell>{resource.uploader}</TableCell>
+                    <TableCell>{resource.teacherName}</TableCell>
                     <TableCell className="text-right">
                         <Button asChild variant="outline" size="sm">
                             <Link href={resource.fileUrl || '#'}>
@@ -71,7 +87,7 @@ export default function ResourcesPage() {
             </Table>
         ) : (
             <p className="text-sm text-muted-foreground text-center py-6">
-                No resources have been uploaded yet. Check back later.
+                No resources have been uploaded for your branch and year yet.
             </p>
         )}
       </CardContent>

@@ -12,13 +12,29 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ClipboardCheck, Clock, HelpCircle, Loader2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from "@/firebase";
+import { collection, doc, query, where } from "firebase/firestore";
 
 export default function QuizzesPage() {
   const firestore = useFirestore();
-  const quizzesQuery = useMemoFirebase(() => collection(firestore, 'quizzes'), [firestore]);
-  const { data: quizzes, isLoading } = useCollection(quizzesQuery);
+  const { user } = useUser();
+
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
+  const quizzesQuery = useMemoFirebase(() => 
+    userData?.branch && userData?.currentYear
+      ? query(
+          collection(firestore, 'quizzes'),
+          where('branch', '==', userData.branch),
+          where('currentYear', '==', userData.currentYear)
+        )
+      : null,
+    [firestore, userData]
+  );
+  const { data: quizzes, isLoading: isLoadingQuizzes } = useCollection(quizzesQuery);
+
+  const isLoading = isUserDataLoading || isLoadingQuizzes;
 
   return (
     <div className="grid gap-6">
@@ -29,7 +45,7 @@ export default function QuizzesPage() {
             Quizzes
           </CardTitle>
           <CardDescription>
-            Here are the available quizzes. Choose one to start your assessment.
+            Here are the available quizzes for your branch and year.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -75,7 +91,7 @@ export default function QuizzesPage() {
         ) : (
           <Card className="sm:col-span-1 md:col-span-2 lg:col-span-3">
             <CardContent className="flex items-center justify-center h-48">
-                <p className="text-muted-foreground">No quizzes available at the moment.</p>
+                <p className="text-muted-foreground">No quizzes available for your branch and year.</p>
             </CardContent>
           </Card>
         )}

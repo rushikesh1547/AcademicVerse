@@ -342,6 +342,14 @@
           "type": "string",
           "description": "The title of the quiz."
         },
+        "branch": {
+          "type": "string",
+          "description": "The academic branch for which this quiz is intended."
+        },
+        "currentYear": {
+          "type": "number",
+          "description": "The year of study for which this quiz is intended."
+        },
         "duration": {
             "type": "number",
             "description": "Duration of the quiz in minutes."
@@ -352,6 +360,8 @@
         "teacherId",
         "subject",
         "title",
+        "branch",
+        "currentYear",
         "duration"
       ]
     },
@@ -443,6 +453,14 @@
             "type": "string",
             "description": "The description of the assignment."
         },
+        "branch": {
+          "type": "string",
+          "description": "The academic branch for which this assignment is intended."
+        },
+        "currentYear": {
+          "type": "number",
+          "description": "The year of study for which this assignment is intended."
+        },
         "dueDate": {
             "type": "string",
             "format": "date"
@@ -458,6 +476,8 @@
         "teacherId",
         "subject",
         "title",
+        "branch",
+        "currentYear",
         "dueDate"
       ]
     },
@@ -523,24 +543,45 @@
           "type": "string",
           "description": "Unique identifier for the Resource entity."
         },
-        "uploaderId": {
+        "teacherId": {
           "type": "string",
-          "description": "Reference to Teacher. (Relationship: Teacher 1:N Resource)"
+          "description": "Reference to Teacher who uploaded the resource."
         },
-        "subjectMapping": {
+        "teacherName": {
+            "type": "string",
+            "description": "Denormalized name of the teacher."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the resource."
+        },
+        "subject": {
           "type": "string",
           "description": "The subject to which the resource is mapped."
         },
-        "fileReference": {
+        "branch": {
+            "type": "string",
+            "description": "The academic branch for which the resource is intended."
+        },
+        "currentYear": {
+            "type": "number",
+            "description": "The year of study for which the resource is intended."
+        },
+        "fileUrl": {
           "type": "string",
+          "format": "uri",
           "description": "A reference to the file (e.g., URL in Firebase Storage)."
         }
       },
       "required": [
         "id",
-        "uploaderId",
-        "subjectMapping",
-        "fileReference"
+        "teacherId",
+        "teacherName",
+        "title",
+        "subject",
+        "branch",
+        "currentYear",
+        "fileUrl"
       ]
     },
     "ExamForm": {
@@ -777,6 +818,14 @@
             "type": "string",
             "description": "The description of the lesson plan."
         },
+        "branch": {
+          "type": "string",
+          "description": "The academic branch for which this lesson plan is intended."
+        },
+        "currentYear": {
+          "type": "number",
+          "description": "The year of study for which this lesson plan is intended."
+        },
         "fileUrl": {
           "type": "string",
           "format": "uri",
@@ -793,6 +842,8 @@
         "teacherName",
         "subject",
         "title",
+        "branch",
+        "currentYear",
         "fileUrl",
         "createdAt"
       ]

@@ -9,7 +9,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -38,6 +37,7 @@ import {
   useFirebaseApp,
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
+  useDoc,
 } from '@/firebase';
 import {
   collection,
@@ -179,12 +179,21 @@ export default function AssignmentsPage() {
   const firestore = useFirestore();
   const { user } = useUser();
 
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
   const assignmentsQuery = useMemoFirebase(
-    () => collection(firestore, 'assignments'),
-    [firestore]
+    () =>
+      userData?.branch && userData?.currentYear
+        ? query(
+            collection(firestore, 'assignments'),
+            where('branch', '==', userData.branch),
+            where('currentYear', '==', userData.currentYear)
+          )
+        : null,
+    [firestore, userData]
   );
-  const { data: assignments, isLoading: isLoadingAssignments } =
-    useCollection(assignmentsQuery);
+  const { data: assignments, isLoading: isLoadingAssignments } = useCollection(assignmentsQuery);
 
   const submissionsQuery = useMemoFirebase(
     () =>
@@ -193,7 +202,7 @@ export default function AssignmentsPage() {
         : null,
     [user, firestore]
   );
-  const { data: submissions, isLoading: isLoadingSubmissions } = useCollection(submissionsQuery);
+  const { data: submissions } = useCollection(submissionsQuery);
 
   const combinedData = useMemo(() => {
     if (!assignments) return [];
@@ -218,7 +227,7 @@ export default function AssignmentsPage() {
     });
   }, [assignments, submissions]);
 
-  const isLoading = isLoadingAssignments;
+  const isLoading = isUserDataLoading || isLoadingAssignments;
 
   return (
     <Card>
@@ -291,7 +300,7 @@ export default function AssignmentsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
-                    No assignments found.
+                    No assignments found for your branch and year.
                   </TableCell>
                 </TableRow>
               )}
