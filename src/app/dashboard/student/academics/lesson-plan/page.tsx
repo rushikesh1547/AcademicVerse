@@ -24,13 +24,15 @@ export default function LessonPlanPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   
+  // The query is only created when the user object is available.
   const lessonPlansQuery = useMemoFirebase(() => 
-    !isUserLoading && user ? query(collection(firestore, 'lessonPlans'), orderBy('createdAt', 'desc')) : null,
-    [firestore, user, isUserLoading]
+    user ? query(collection(firestore, 'lessonPlans'), orderBy('createdAt', 'desc')) : null,
+    [firestore, user]
   );
   const { data: lessonPlans, isLoading: isLoadingLessonPlans } = useCollection(lessonPlansQuery);
 
-  const isLoading = isUserLoading || isLoadingLessonPlans;
+  // The overall loading state depends on both the user auth check and the data fetching.
+  const isLoading = isUserLoading || (user && isLoadingLessonPlans);
 
   return (
     <Card>
