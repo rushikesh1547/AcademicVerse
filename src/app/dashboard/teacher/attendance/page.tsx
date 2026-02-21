@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Camera, Eye, BarChart3, CheckCircle } from 'lucide-react';
+import { Loader2, Camera, Eye, BarChart3 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -38,7 +38,6 @@ import {
   DialogDescription,
   DialogFooter,
   DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { scanClassroom } from '@/ai/ai-classroom-scanner';
 
@@ -60,6 +59,7 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
     const [sessionData, setSessionData] = useState<{ id: string, title: string } | null>(null);
     const [snapshotStep, setSnapshotStep] = useState(0);
     const [intervalResults, setIntervalResults] = useState<string[][]>([]);
+    const [statusMessage, setStatusMessage] = useState('Starting session...');
     
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -70,12 +70,13 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
     );
     const { data: students, isLoading: isLoadingStudents } = useCollection(studentsQuery);
 
-    const resetState = () => {
+    const resetState = useCallback(() => {
         setSessionData(null);
         setSnapshotStep(0);
         setIntervalResults([]);
         setIsProcessing(false);
-    };
+        setStatusMessage('Starting session...');
+    }, []);
 
     const startStream = useCallback(async () => {
         try {
@@ -109,7 +110,7 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
             resetState();
         }
         return () => stopStream();
-    }, [isOpen, startStream, stopStream]);
+    }, [isOpen, startStream, stopStream, resetState]);
 
     useEffect(() => {
         const videoElement = videoRef.current;
@@ -122,10 +123,97 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
             videoElement.srcObject = null;
         }
     }, [stream]);
+    
+    const takeSnapshotAndScan = async (step: number) => {
+        if (!videoRef.current || !students || !sessionData) {
+            throw new Error("Camera is not ready, students not loaded, or session not started.");
+        }
+        
+        setStatusMessage(`Taking snapshot ${step} of ${SNAPSHOT_COUNT}...`);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const classroomPhotoDataUri = canvas.toDataURL('image/jpeg');
 
-    const handleStartSession = async () => {
+        const studentDataForAI = students.map(s => ({
+            id: s.id,
+            displayName: s.displayName,
+            faceProfileImageUrls: s.faceProfileImageUrls || [],
+        })).filter(s => s.faceProfileImageUrls.length > 0);
+
+        const result = await scanClassroom({ classroomPhotoDataUri, students: studentDataForAI });
+        
+        setIntervalResults(prev => [...prev, result.identifiedStudentIds]);
+        setSnapshotStep(prev => prev + 1);
+
+        toast({
+            title: `Snapshot ${step} Complete`,
+            description: `Identified ${result.identifiedStudentIds.length} students.`,
+        });
+    }
+
+    const runAutomaticCaptureSequence = useCallback(async () => {
+        if (!sessionData) return;
+        setIsProcessing(true);
+        const allResults: string[][] = [];
+
+        for (let i = 1; i <= SNAPSHOT_COUNT; i++) {
+            try {
+                await takeSnapshotAndScan(i);
+                // The results are pushed to state, but we'll collect them here too
+                // to avoid state lag issues inside the loop.
+                allResults.push((await new Promise<string[]>(resolve => {
+                    setIntervalResults(currentResults => {
+                        resolve(currentResults[currentResults.length - 1]);
+                        return currentResults;
+                    })
+                })));
+
+                if (i < SNAPSHOT_COUNT) {
+                    setStatusMessage(`Waiting for next snapshot...`);
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            } catch (error) {
+                 console.error("Error during snapshot:", error);
+                 toast({ variant: "destructive", title: "Scan Error", description: "An unexpected error occurred during one of the scans." });
+                 setIsProcessing(false);
+                 setIsOpen(false);
+                 return;
+            }
+        }
+
+        setStatusMessage('All snapshots taken. Finalizing attendance...');
+        
+        const finalPresentIds = allResults.reduce((acc, current) => {
+            const currentSet = new Set(current);
+            return acc.filter(id => currentSet.has(id));
+        }, allResults[0] || []);
+        
+        const finalPresentIdsSet = new Set(finalPresentIds);
+        
+        const sessionDocRef = doc(firestore, 'attendanceSessions', sessionData.id);
+        updateDocumentNonBlocking(sessionDocRef, { 
+            presentStudentIds: Array.from(finalPresentIdsSet),
+            status: 'ended',
+            endTime: serverTimestamp()
+        });
+
+        toast({
+            title: "Attendance Finalized",
+            description: `Marked ${finalPresentIdsSet.size} students as present.`
+        });
+        setIsProcessing(false);
+        setIsOpen(false);
+    }, [sessionData, students, firestore, toast, setIsOpen]);
+
+
+    const handleStartSessionAndScan = async () => {
         if (!user) return;
         setIsProcessing(true);
+        setStatusMessage('Creating session document...');
+        
         const sessionTitle = `${subject} - ${new Date().toLocaleDateString()}`;
         try {
             const sessionDocData = {
@@ -141,138 +229,58 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
             setSnapshotStep(1);
             toast({
                 title: 'Session Started',
-                description: `Session "${sessionTitle}" is now active.`,
+                description: `Automatic scanning will now begin.`,
             });
         } catch (e) {
             console.error("Error creating session:", e);
-            toast({
-                variant: "destructive",
-                title: "Session Error",
-                description: "Could not create a new attendance session.",
-            });
-        } finally {
+            toast({ variant: "destructive", title: "Session Error", description: "Could not create a new attendance session." });
             setIsProcessing(false);
         }
     };
 
-    const handleTakeSnapshot = async () => {
-        if (!videoRef.current || !students || !sessionData) {
-            toast({ variant: "destructive", title: "Error", description: "Camera is not ready, students not loaded, or session not started." });
-            return;
+    useEffect(() => {
+        if (sessionData && snapshotStep === 1 && !isProcessing) {
+            runAutomaticCaptureSequence();
         }
-        setIsProcessing(true);
+    }, [sessionData, snapshotStep, isProcessing, runAutomaticCaptureSequence]);
 
-        const canvas = document.createElement('canvas');
-        canvas.width = videoRef.current.videoWidth;
-        canvas.height = videoRef.current.videoHeight;
-        canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const classroomPhotoDataUri = canvas.toDataURL('image/jpeg');
-
-        try {
-            const studentDataForAI = students.map(s => ({
-                id: s.id,
-                displayName: s.displayName,
-                faceProfileImageUrls: s.faceProfileImageUrls || [],
-            })).filter(s => s.faceProfileImageUrls.length > 0);
-
-            const result = await scanClassroom({ classroomPhotoDataUri, students: studentDataForAI });
-            
-            setIntervalResults(prev => [...prev, result.identifiedStudentIds]);
-            setSnapshotStep(prev => prev + 1);
-
-            toast({
-                title: `Snapshot ${snapshotStep} Complete`,
-                description: `Identified ${result.identifiedStudentIds.length} students.`,
-            });
-        } catch (error) {
-            console.error("Error scanning classroom:", error);
-            toast({ variant: "destructive", title: "AI Scan Error", description: "An unexpected error occurred during the scan." });
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    const handleFinalize = async () => {
-        if (!sessionData) return;
-        setIsProcessing(true);
-
-        // Find students present in all snapshots (intersection of all arrays)
-        const finalPresentIds = intervalResults.reduce((acc, current) => {
-            const currentSet = new Set(current);
-            return acc.filter(id => currentSet.has(id));
-        }, intervalResults[0] || []);
-        
-        const finalPresentIdsSet = new Set(finalPresentIds);
-        
-        const sessionDocRef = doc(firestore, 'attendanceSessions', sessionData.id);
-        updateDocumentNonBlocking(sessionDocRef, { 
-            presentStudentIds: Array.from(finalPresentIdsSet),
-            status: 'ended',
-            endTime: serverTimestamp()
-        });
-
-        toast({
-            title: "Attendance Finalized",
-            description: `Marked ${finalPresentIdsSet.size} students as fully present.`
-        });
-        setIsProcessing(false);
-        setIsOpen(false);
-    };
-    
     const renderContent = () => {
         if (!sessionData) {
             return (
                 <DialogFooter>
-                    <Button onClick={handleStartSession} disabled={isProcessing || isLoadingStudents}>
+                    <Button onClick={handleStartSessionAndScan} disabled={isProcessing || isLoadingStudents || !stream}>
                         {(isProcessing || isLoadingStudents) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isLoadingStudents ? 'Loading Student Data...' : 'Start 1-Hour Session'}
+                        {isLoadingStudents ? 'Loading Student Data...' : !stream ? 'Waiting for Camera...' : 'Start Automatic Session'}
                     </Button>
                 </DialogFooter>
             );
         }
 
-        if (snapshotStep <= SNAPSHOT_COUNT) {
-            return (
-                <>
-                    <div className="grid md:grid-cols-2 gap-6 items-center">
-                        <div className="w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
-                            <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                            {!stream && <Loader2 className="h-8 w-8 animate-spin text-muted-foreground absolute" />}
-                        </div>
-                        <div>
-                            <h3 className="font-semibold mb-2">Interval Snapshots</h3>
-                            <p className="text-sm text-muted-foreground mb-4">
-                                Take {SNAPSHOT_COUNT} snapshots during the lecture. Only students present in all snapshots will be marked present.
-                            </p>
-                            <Progress value={(snapshotStep - 1) / SNAPSHOT_COUNT * 100} className="mb-4" />
-                            <div className="space-y-2">
-                                {Array.from({ length: SNAPSHOT_COUNT }).map((_, i) => (
-                                    <div key={i} className="flex items-center gap-2 text-sm">
-                                        {i < intervalResults.length ? <CheckCircle className="h-4 w-4 text-green-500" /> : <div className="h-4 w-4 rounded-full border" />}
-                                        <span>Snapshot {i + 1}</span>
-                                        {i < intervalResults.length && <span className="text-xs text-muted-foreground">({intervalResults[i].length} students)</span>}
-                                    </div>
-                                ))}
-                            </div>
+        return (
+            <>
+                <div className="grid md:grid-cols-2 gap-6 items-center">
+                    <div className="w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
+                        <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                        <div className="absolute inset-0 bg-black/20 flex items-end justify-center p-2">
+                            <Badge variant="destructive">RECORDING</Badge>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button onClick={handleTakeSnapshot} disabled={isProcessing || !stream}>
-                            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Take Snapshot {snapshotStep} of {SNAPSHOT_COUNT}
-                        </Button>
-                    </DialogFooter>
-                </>
-            );
-        }
-
-        return (
-             <DialogFooter>
-                <Button onClick={handleFinalize} disabled={isProcessing}>
-                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Finalize & Save Attendance
-                </Button>
-            </DialogFooter>
+                    <div className='flex flex-col justify-center items-center'>
+                        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+                        <h3 className="font-semibold mb-2 text-lg">Processing Attendance</h3>
+                        <p className="text-sm text-muted-foreground text-center mb-4">
+                            {statusMessage}
+                        </p>
+                        <Progress value={(snapshotStep - 1) / SNAPSHOT_COUNT * 100} className="w-full" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <p className='text-xs text-muted-foreground mr-auto'>Please keep this dialog open. It will close automatically when complete.</p>
+                    <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>
+                        Cancel Session
+                    </Button>
+                </DialogFooter>
+            </>
         );
     };
 
@@ -286,9 +294,9 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Attendance Session: {subject}</DialogTitle>
+                    <DialogTitle>Automatic Attendance: {subject}</DialogTitle>
                     <DialogDescription>
-                        {sessionData ? `Session ID: ${sessionData.id}` : 'Start a new 1-hour attendance session.'}
+                        {sessionData ? `Session ID: ${sessionData.id}` : 'This will start an automated attendance session.'}
                     </DialogDescription>
                 </DialogHeader>
                 {renderContent()}
@@ -304,7 +312,7 @@ export default function TeacherAttendancePage() {
     const sessionsQuery = useMemoFirebase(
     () =>
       user
-        ? query(collection(firestore, 'attendanceSessions'), where('teacherId', '==', user.uid))
+        ? query(collection(firestore, 'attendanceSessions'), where('teacherId', '==', user.uid), orderBy('startTime', 'desc'))
         : null,
     [user, firestore]
   );
@@ -385,5 +393,3 @@ export default function TeacherAttendancePage() {
         </div>
     );
 }
-
-    
