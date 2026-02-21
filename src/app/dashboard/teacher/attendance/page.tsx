@@ -10,12 +10,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Camera, Eye, BarChart3 } from 'lucide-react';
+import { Loader2, Camera, Eye, BarChart3, CheckCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import {
   useUser,
   useFirestore,
-  addDocumentNonBlocking,
   useCollection,
   useMemoFirebase,
   updateDocumentNonBlocking,
@@ -38,6 +38,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { scanClassroom } from '@/ai/ai-classroom-scanner';
 
@@ -49,12 +50,17 @@ const subjects = [
     'Database Systems - Lab'
 ];
 
+const SNAPSHOT_COUNT = 4;
+
 function StartAttendanceScanDialog({ subject, user }: { subject: string, user: any }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [lastScanResults, setLastScanResults] = useState<string[] | null>(null);
+    const [sessionData, setSessionData] = useState<{ id: string, title: string } | null>(null);
+    const [snapshotStep, setSnapshotStep] = useState(0);
+    const [intervalResults, setIntervalResults] = useState<string[][]>([]);
+    
     const firestore = useFirestore();
     const { toast } = useToast();
 
@@ -63,6 +69,13 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
         [firestore]
     );
     const { data: students, isLoading: isLoadingStudents } = useCollection(studentsQuery);
+
+    const resetState = () => {
+        setSessionData(null);
+        setSnapshotStep(0);
+        setIntervalResults([]);
+        setIsProcessing(false);
+    };
 
     const startStream = useCallback(async () => {
         try {
@@ -75,6 +88,7 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
                 title: 'Camera Error',
                 description: 'Could not access camera. Please check permissions.',
             });
+            setIsOpen(false);
         }
     }, [toast]);
 
@@ -92,6 +106,7 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
             startStream();
         } else {
             stopStream();
+            resetState();
         }
         return () => stopStream();
     }, [isOpen, startStream, stopStream]);
@@ -108,36 +123,25 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
         }
     }, [stream]);
 
-    const handleScanAndStartSession = async () => {
-        if (!videoRef.current || !students || !user) {
-            toast({
-                variant: "destructive",
-                title: "Scan Error",
-                description: "Camera is not ready or student data could not be loaded.",
-            });
-            return;
-        }
-
+    const handleStartSession = async () => {
+        if (!user) return;
         setIsProcessing(true);
-        setLastScanResults(null);
-
-        // 1. Create the session document first
         const sessionTitle = `${subject} - ${new Date().toLocaleDateString()}`;
-        let newSessionId = '';
         try {
-            const sessionData = {
+            const sessionDocData = {
                 title: sessionTitle,
                 teacherId: user.uid,
-                status: 'active', // Session is active immediately
+                status: 'active',
                 startTime: serverTimestamp(),
                 endTime: null,
-                presentStudentIds: [], // Initialize with an empty array
+                presentStudentIds: [],
             };
-            const docRef = await addDoc(collection(firestore, 'attendanceSessions'), sessionData);
-            newSessionId = docRef.id;
+            const docRef = await addDoc(collection(firestore, 'attendanceSessions'), sessionDocData);
+            setSessionData({ id: docRef.id, title: sessionTitle });
+            setSnapshotStep(1);
             toast({
                 title: 'Session Started',
-                description: `Session "${sessionTitle}" is now active. Scanning for students...`,
+                description: `Session "${sessionTitle}" is now active.`,
             });
         } catch (e) {
             console.error("Error creating session:", e);
@@ -146,18 +150,24 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
                 title: "Session Error",
                 description: "Could not create a new attendance session.",
             });
+        } finally {
             setIsProcessing(false);
+        }
+    };
+
+    const handleTakeSnapshot = async () => {
+        if (!videoRef.current || !students || !sessionData) {
+            toast({ variant: "destructive", title: "Error", description: "Camera is not ready, students not loaded, or session not started." });
             return;
         }
+        setIsProcessing(true);
 
-        // 2. Capture image
         const canvas = document.createElement('canvas');
         canvas.width = videoRef.current.videoWidth;
         canvas.height = videoRef.current.videoHeight;
         canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
         const classroomPhotoDataUri = canvas.toDataURL('image/jpeg');
 
-        // 3. Scan and Mark Attendance
         try {
             const studentDataForAI = students.map(s => ({
                 id: s.id,
@@ -165,90 +175,123 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
                 faceProfileImageUrls: s.faceProfileImageUrls || [],
             })).filter(s => s.faceProfileImageUrls.length > 0);
 
-            const result = await scanClassroom({
-                classroomPhotoDataUri,
-                students: studentDataForAI,
+            const result = await scanClassroom({ classroomPhotoDataUri, students: studentDataForAI });
+            
+            setIntervalResults(prev => [...prev, result.identifiedStudentIds]);
+            setSnapshotStep(prev => prev + 1);
+
+            toast({
+                title: `Snapshot ${snapshotStep} Complete`,
+                description: `Identified ${result.identifiedStudentIds.length} students.`,
             });
-
-            if (result.identifiedStudentIds.length > 0) {
-                // Update the session document with the array of present students. This is the source of truth.
-                const sessionDocRef = doc(firestore, 'attendanceSessions', newSessionId);
-                updateDocumentNonBlocking(sessionDocRef, { presentStudentIds: result.identifiedStudentIds });
-                
-                // Prepare names for the toast message
-                const identifiedNames = result.identifiedStudentIds.map(studentId => {
-                    const student = students.find(s => s.id === studentId);
-                    return student ? student.displayName : 'Unknown Student';
-                }).filter(name => name !== 'Unknown Student');
-
-                setLastScanResults(identifiedNames);
-                toast({
-                    title: "Scan Complete",
-                    description: `Marked ${identifiedNames.length} students present: ${identifiedNames.join(', ')}`,
-                });
-
-            } else {
-                 setLastScanResults([]);
-                 toast({
-                    title: "Scan Complete",
-                    description: "No students were identified in the photo.",
-                });
-            }
         } catch (error) {
             console.error("Error scanning classroom:", error);
-            toast({
-                variant: "destructive",
-                title: "AI Scan Error",
-                description: "An unexpected error occurred during the classroom scan.",
-            });
+            toast({ variant: "destructive", title: "AI Scan Error", description: "An unexpected error occurred during the scan." });
         } finally {
             setIsProcessing(false);
-            setIsOpen(false);
         }
     };
+
+    const handleFinalize = async () => {
+        if (!sessionData) return;
+        setIsProcessing(true);
+
+        // Find students present in all snapshots (intersection of all arrays)
+        const finalPresentIds = intervalResults.reduce((acc, current) => {
+            const currentSet = new Set(current);
+            return acc.filter(id => currentSet.has(id));
+        }, intervalResults[0] || []);
+        
+        const finalPresentIdsSet = new Set(finalPresentIds);
+        
+        const sessionDocRef = doc(firestore, 'attendanceSessions', sessionData.id);
+        updateDocumentNonBlocking(sessionDocRef, { 
+            presentStudentIds: Array.from(finalPresentIdsSet),
+            status: 'ended',
+            endTime: serverTimestamp()
+        });
+
+        toast({
+            title: "Attendance Finalized",
+            description: `Marked ${finalPresentIdsSet.size} students as fully present.`
+        });
+        setIsProcessing(false);
+        setIsOpen(false);
+    };
     
+    const renderContent = () => {
+        if (!sessionData) {
+            return (
+                <DialogFooter>
+                    <Button onClick={handleStartSession} disabled={isProcessing || isLoadingStudents}>
+                        {(isProcessing || isLoadingStudents) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isLoadingStudents ? 'Loading Student Data...' : 'Start 1-Hour Session'}
+                    </Button>
+                </DialogFooter>
+            );
+        }
+
+        if (snapshotStep <= SNAPSHOT_COUNT) {
+            return (
+                <>
+                    <div className="grid md:grid-cols-2 gap-6 items-center">
+                        <div className="w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
+                            <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                            {!stream && <Loader2 className="h-8 w-8 animate-spin text-muted-foreground absolute" />}
+                        </div>
+                        <div>
+                            <h3 className="font-semibold mb-2">Interval Snapshots</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Take {SNAPSHOT_COUNT} snapshots during the lecture. Only students present in all snapshots will be marked present.
+                            </p>
+                            <Progress value={(snapshotStep - 1) / SNAPSHOT_COUNT * 100} className="mb-4" />
+                            <div className="space-y-2">
+                                {Array.from({ length: SNAPSHOT_COUNT }).map((_, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-sm">
+                                        {i < intervalResults.length ? <CheckCircle className="h-4 w-4 text-green-500" /> : <div className="h-4 w-4 rounded-full border" />}
+                                        <span>Snapshot {i + 1}</span>
+                                        {i < intervalResults.length && <span className="text-xs text-muted-foreground">({intervalResults[i].length} students)</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={handleTakeSnapshot} disabled={isProcessing || !stream}>
+                            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Take Snapshot {snapshotStep} of {SNAPSHOT_COUNT}
+                        </Button>
+                    </DialogFooter>
+                </>
+            );
+        }
+
+        return (
+             <DialogFooter>
+                <Button onClick={handleFinalize} disabled={isProcessing}>
+                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Finalize & Save Attendance
+                </Button>
+            </DialogFooter>
+        );
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 <Button>
                     <Camera className="mr-2 h-4 w-4" />
-                    Start Attendance
+                    Start Session
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Start Attendance Scan for: {subject}</DialogTitle>
+                    <DialogTitle>Attendance Session: {subject}</DialogTitle>
                     <DialogDescription>
-                        Position the camera to see your students, then click the scan button. A new session will be created automatically.
+                        {sessionData ? `Session ID: ${sessionData.id}` : 'Start a new 1-hour attendance session.'}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
-                        <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                        {!stream && <Loader2 className="h-8 w-8 animate-spin text-muted-foreground absolute" />}
-                        {isProcessing && (
-                            <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
-                                <Loader2 className="h-12 w-12 animate-spin" />
-                                <p className="mt-2">Processing...</p>
-                            </div>
-                        )}
-                    </div>
-                    <div>
-                        <h3 className="font-semibold mb-2">Instructions</h3>
-                        <ol className="list-decimal list-inside text-sm space-y-1 text-muted-foreground">
-                            <li>Ensure good lighting in the classroom.</li>
-                            <li>Ask students to face the camera.</li>
-                            <li>Try to capture as many students as possible.</li>
-                            <li>Click the scan button to log attendance.</li>
-                        </ol>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button onClick={handleScanAndStartSession} disabled={isProcessing || isLoadingStudents || !stream}>
-                        {(isProcessing || isLoadingStudents) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isLoadingStudents ? 'Loading Students...' : 'Scan Classroom & Start Session'}
-                    </Button>
-                </DialogFooter>
+                {renderContent()}
             </DialogContent>
         </Dialog>
     );
@@ -276,7 +319,7 @@ export default function TeacherAttendancePage() {
                         Start New Attendance Session
                     </CardTitle>
                     <CardDescription>
-                        Select a subject to start a new attendance scan. A new session will be created automatically.
+                        Select a subject to begin a new interval-based attendance session.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-2">
@@ -317,14 +360,14 @@ export default function TeacherAttendancePage() {
                           <TableRow key={session.id}>
                             <TableCell className="font-medium">{session.title}</TableCell>
                             <TableCell>
-                                <Badge variant={session.status === 'active' ? 'default' : session.status === 'ended' ? 'destructive' : 'secondary'}>
+                                <Badge variant={session.status === 'active' ? 'default' : session.status === 'ended' ? 'secondary' : 'outline'}>
                                     {session.status}
                                 </Badge>
                             </TableCell>
                             <TableCell className="text-right space-x-2">
-                                <Button asChild variant="secondary" size="sm">
+                                <Button asChild variant="outline" size="sm">
                                     <Link href={`/dashboard/teacher/attendance/${session.id}`}>
-                                        <Eye className="mr-2 h-4 w-4" /> View
+                                        <Eye className="mr-2 h-4 w-4" /> View Report
                                     </Link>
                                 </Button>
                             </TableCell>
@@ -342,3 +385,5 @@ export default function TeacherAttendancePage() {
         </div>
     );
 }
+
+    

@@ -149,28 +149,8 @@ service cloud.firestore {
     match /attendanceSessions/{sessionId} {
       allow get, list: if isSignedIn();
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
-      allow update: if isSessionOwner(sessionId) && request.resource.data.keys().hasOnly(['presentStudentIds']);
+      allow update: if isSessionOwner(sessionId);
       allow delete: if isSessionOwner(sessionId);
-    }
-
-    /**
-     * @description Attendance intervals can only be created/managed by the session owner (teacher). Students can read their own records.
-     * @path /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId}
-     */
-    match /attendanceSessions/{sessionId}/attendanceIntervals/{intervalId} {
-      allow get: if isSignedIn() && (isSessionOwner(sessionId) || (isExistingDoc() && resource.data.studentId == request.auth.uid));
-      allow list: if isSessionOwner(sessionId);
-      allow create, update, delete: if isSessionOwner(sessionId);
-    }
-
-    /**
-     * @description Attendance summary data is written by the backend. Readable by the relevant student or the session's teacher.
-     * @path /attendanceSessions/{sessionId}/attendanceSummary/{summaryId}
-     */
-    match /attendanceSessions/{sessionId}/attendanceSummary/{summaryId} {
-      allow get: if isSignedIn() && (isSessionOwner(sessionId) || (isExistingDoc() && resource.data.studentId == request.auth.uid));
-      allow list: if isSessionOwner(sessionId);
-      allow create, update, delete: if false; // Only backend/functions can write summaries
     }
 
     // --------------------------------
@@ -351,3 +331,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
