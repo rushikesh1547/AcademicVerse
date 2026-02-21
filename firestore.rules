@@ -143,11 +143,12 @@ service cloud.firestore {
     // --------------------------------
 
     /**
-     * @description Attendance session info is readable by any signed-in user. Only the creating teacher can manage sessions.
+     * @description Attendance session info is readable by any signed-in user. Teachers can manage their own sessions.
      * @path /attendanceSessions/{sessionId}
      */
     match /attendanceSessions/{sessionId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isTeacher() ? request.auth.uid == resource.data.teacherId : isSignedIn();
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update: if isSessionOwner(sessionId);
       allow delete: if isSessionOwner(sessionId);
@@ -331,5 +332,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

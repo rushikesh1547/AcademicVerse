@@ -19,6 +19,7 @@ import {
   useCollection,
   useMemoFirebase,
   updateDocumentNonBlocking,
+  useDoc,
 } from '@/firebase';
 import { collection, query, where, serverTimestamp, addDoc, doc, orderBy } from 'firebase/firestore';
 import {
@@ -306,17 +307,22 @@ function StartAttendanceScanDialog({ subject, user }: { subject: string, user: a
 }
 
 export default function TeacherAttendancePage() {
-    const { user } = useUser();
+    const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
+
+    const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+    const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
     const sessionsQuery = useMemoFirebase(
     () =>
-      user
+      user && userData
         ? query(collection(firestore, 'attendanceSessions'), where('teacherId', '==', user.uid), orderBy('startTime', 'desc'))
         : null,
-    [user, firestore]
+    [user, userData, firestore]
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection(sessionsQuery);
+
+  const isLoading = isUserLoading || isUserDataLoading || isLoadingSessions;
 
     return (
         <div className="grid gap-6 lg:grid-cols-2">
@@ -350,7 +356,7 @@ export default function TeacherAttendancePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {isLoadingSessions ? (
+                  {isLoading ? (
                     <div className="flex items-center justify-center p-6">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
