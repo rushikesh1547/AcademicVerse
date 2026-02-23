@@ -170,7 +170,8 @@ service cloud.firestore {
      * @path /lessonPlans/{lessonPlanId}
      */
     match /lessonPlans/{lessonPlanId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isTeacher();
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isExistingDoc() && resource.data.teacherId == request.auth.uid;
     }
