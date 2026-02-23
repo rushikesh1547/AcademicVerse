@@ -13,6 +13,9 @@ import {
   BookOpen,
   Book,
   MessageSquare,
+  Bell,
+  Pencil,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +26,7 @@ import {
   } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 
+// Reorganized navItems to match student structure with accordions
 const navItems = [
   { href: '/dashboard/teacher', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/teacher/profile', icon: User, label: 'Profile' },
@@ -34,11 +38,25 @@ const navItems = [
         { href: '/dashboard/teacher/academics/lesson-plan', icon: Book, label: 'Lesson Plan' },
     ]
   },
-  { href: '/dashboard/teacher/assignments', icon: FileText, label: 'Assignments' },
-  { href: '/dashboard/teacher/quizzes', icon: ClipboardCheck, label: 'Quizzes' },
+  {
+    label: 'Assessments', // New Group
+    icon: FileText,
+    subItems: [
+        { href: '/dashboard/teacher/assignments', icon: FileText, label: 'Assignments' },
+        { href: '/dashboard/teacher/quizzes', icon: ClipboardCheck, label: 'Quizzes' },
+    ]
+  },
+  {
+    label: 'Examinations', // New Group
+    icon: Pencil,
+    subItems: [
+      { href: '/dashboard/teacher/exam-approvals', icon: CheckSquare, label: 'Exam Approvals' },
+      { href: '/dashboard/teacher/hall-tickets', icon: Ticket, label: 'Hall Tickets' },
+    ]
+  },
   { href: '/dashboard/teacher/feedback', icon: MessageSquare, label: 'Feedback' },
-  { href: '/dashboard/teacher/exam-approvals', icon: CheckSquare, label: 'Exam Approvals' },
-  { href: '/dashboard/teacher/hall-tickets', icon: Ticket, label: 'Hall Tickets' },
+  { href: '/dashboard/teacher/notifications', icon: Bell, label: 'Notifications' },
+  { href: '/dashboard/proctoring', icon: ShieldAlert, label: 'AI Proctoring' },
 ];
 
 export function TeacherNav() {
@@ -75,7 +93,7 @@ export function TeacherNav() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          ) : (
+          ) : item.href ? (
             <Link key={index} href={item.href}>
                 <Button
                 variant={pathname.startsWith(item.href) ? 'secondary' : 'ghost'}
@@ -85,7 +103,7 @@ export function TeacherNav() {
                 {item.label}
                 </Button>
             </Link>
-        )
+        ) : null
       )}
     </nav>
   );

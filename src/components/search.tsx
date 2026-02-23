@@ -30,7 +30,9 @@ const searchablePages = [
     { href: '/dashboard/teacher/assignments', label: 'Manage Assignments' },
     { href: '/dashboard/teacher/quizzes', label: 'Manage Quizzes' },
     { href: '/dashboard/teacher/feedback', label: 'View Feedback' },
-
+    { href: '/dashboard/teacher/exam-approvals', label: 'Exam Approvals' },
+    { href: '/dashboard/teacher/hall-tickets', label: 'Manage Hall Tickets' },
+    { href: '/dashboard/teacher/notifications', label: 'Teacher Notifications' },
 
     // Admin
     { href: '/dashboard/admin', label: 'Admin Dashboard' },
