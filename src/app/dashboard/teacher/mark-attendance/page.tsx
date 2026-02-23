@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -40,18 +40,21 @@ export default function MarkTeacherAttendancePage() {
   );
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const { today, tomorrow } = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    const tm = new Date(t);
+    tm.setDate(tm.getDate() + 1);
+    return { today: t, tomorrow: tm };
+  }, []);
 
   const attendanceQuery = useMemoFirebase(
-    () => user ? query(
+    () => !isUserLoading && user ? query(
       collection(firestore, `users/${user.uid}/teacherAttendance`),
       where('timestamp', '>=', today),
       where('timestamp', '<', tomorrow)
     ) : null,
-    [user, firestore, today, tomorrow]
+    [user, isUserLoading, firestore, today, tomorrow]
   );
   const { data: todaysAttendance, isLoading: isLoadingAttendance } = useCollection(attendanceQuery);
 
@@ -78,7 +81,7 @@ export default function MarkTeacherAttendancePage() {
     return () => {
       stream?.getTracks().forEach(track => track.stop());
     };
-  }, [startStream]);
+  }, [startStream, stream]);
   
   useEffect(() => {
       const videoElement = videoRef.current;
