@@ -72,7 +72,7 @@ export default function ManageLessonPlanPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
-  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  const { data: userData } = useDoc(userDocRef);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -88,10 +88,10 @@ export default function ManageLessonPlanPage() {
 
   const lessonPlansQuery = useMemoFirebase(
     () =>
-      !isUserLoading && !isUserDataLoading && user
-        ? query(collection(firestore, 'lessonPlans'), where('teacherId', '==', user.uid), orderBy('createdAt', 'desc'))
+      userData
+        ? query(collection(firestore, 'lessonPlans'), where('teacherId', '==', userData.id), orderBy('createdAt', 'desc'))
         : null,
-    [user, firestore, isUserLoading, isUserDataLoading]
+    [userData, firestore]
   );
   const { data: lessonPlans, isLoading: isLoadingLessonPlans } =
     useCollection(lessonPlansQuery);
