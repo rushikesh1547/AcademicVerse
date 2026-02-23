@@ -33,9 +33,10 @@ import {
   useFirebaseApp,
   errorEmitter,
   FirestorePermissionError,
-  addDocumentNonBlocking
+  addDocumentNonBlocking,
+  useDoc,
 } from '@/firebase';
-import { collection, query, where, serverTimestamp, addDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, addDoc, orderBy, doc } from 'firebase/firestore';
 import {
   getStorage,
   ref,
@@ -70,6 +71,9 @@ export default function ManageLessonPlanPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -84,10 +88,10 @@ export default function ManageLessonPlanPage() {
 
   const lessonPlansQuery = useMemoFirebase(
     () =>
-      !isUserLoading && user
+      !isUserLoading && !isUserDataLoading && user
         ? query(collection(firestore, 'lessonPlans'), where('teacherId', '==', user.uid), orderBy('createdAt', 'desc'))
         : null,
-    [user, firestore, isUserLoading]
+    [user, firestore, isUserLoading, isUserDataLoading]
   );
   const { data: lessonPlans, isLoading: isLoadingLessonPlans } =
     useCollection(lessonPlansQuery);
