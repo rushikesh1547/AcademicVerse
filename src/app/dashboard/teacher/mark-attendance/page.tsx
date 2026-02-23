@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -19,18 +19,16 @@ import {
   addDocumentNonBlocking,
   useCollection,
 } from '@/firebase';
-import { doc, serverTimestamp, collection, query, where, Timestamp } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, query, where } from 'firebase/firestore';
 import { verifyStudentFace } from '@/ai/ai-face-verification';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, CheckCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 export default function MarkTeacherAttendancePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   
@@ -60,35 +58,34 @@ export default function MarkTeacherAttendancePage() {
 
   const hasMarkedToday = todaysAttendance && todaysAttendance.length > 0;
 
-  const startStream = useCallback(async () => {
-    try {
-      const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      setStream(newStream);
-      setHasCameraPermission(true);
-    } catch (err) {
-      console.error('Error accessing camera:', err);
-      setHasCameraPermission(false);
-      toast({
-        variant: 'destructive',
-        title: 'Camera Error',
-        description: 'Could not access camera. Please check browser permissions.',
-      });
-    }
-  }, [toast]);
-
   useEffect(() => {
-    startStream();
+    let stream: MediaStream | null = null;
+    const getCameraPermission = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setHasCameraPermission(true);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to use this app.',
+        });
+      }
+    };
+
+    getCameraPermission();
+
     return () => {
       stream?.getTracks().forEach(track => track.stop());
     };
-  }, [startStream, stream]);
-  
-  useEffect(() => {
-      const videoElement = videoRef.current;
-      if(videoElement && stream) {
-          videoElement.srcObject = stream;
-      }
-  }, [stream]);
+  }, [toast]);
+
 
   const handleMarkAttendance = async () => {
     if (!videoRef.current || !userData?.profileImageUrl) {
@@ -159,14 +156,6 @@ export default function MarkTeacherAttendancePage() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {hasCameraPermission === false && (
-          <Alert variant="destructive">
-            <AlertTitle>Camera Access Denied</AlertTitle>
-            <AlertDescription>
-              This feature requires camera access. Please enable it in your browser settings and refresh the page.
-            </AlertDescription>
-          </Alert>
-        )}
         <div className="w-full aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center relative">
           <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
           {hasCameraPermission === null && (
@@ -175,6 +164,14 @@ export default function MarkTeacherAttendancePage() {
               </div>
           )}
         </div>
+        {hasCameraPermission === false && (
+          <Alert variant="destructive">
+            <AlertTitle>Camera Access Denied</AlertTitle>
+            <AlertDescription>
+              This feature requires camera access. Please enable it in your browser settings and refresh the page.
+            </AlertDescription>
+          </Alert>
+        )}
         {isLoading && <Loader2 className="mx-auto h-8 w-8 animate-spin" />}
         {!isLoading && hasMarkedToday && (
             <Alert variant="default" className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
