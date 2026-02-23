@@ -115,7 +115,9 @@ service cloud.firestore {
       
       // Teacher self-attendance
       match /teacherAttendance/{attendanceId} {
-        allow read, write: if isOwner(userId);
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.teacherId == userId;
+        allow update, delete: if isOwner(userId);
       }
     }
 
