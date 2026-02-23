@@ -136,10 +136,7 @@ export default function TeacherProfilePage() {
   }
 
   return (
-    <>
-      <div className="flex items-center">
-        <h1 className="text-lg font-semibold md:text-2xl">Teacher Profile</h1>
-      </div>
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -174,6 +171,33 @@ export default function TeacherProfilePage() {
                         Upload Photo
                     </Button>
               </div>
+            </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Attendance Verification Photo</CardTitle>
+            <CardDescription>
+            Your profile photo is used to verify your identity for marking daily attendance.
+            Please ensure you have a clear, well-lit, front-facing photo uploaded.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="flex items-center gap-4">
+            <Avatar className="h-24 w-24">
+                {userData?.profileImageUrl ? (
+                <AvatarImage src={userData.profileImageUrl} alt="User Avatar" />
+                ) : (
+                <AvatarFallback className="text-3xl">
+                    {userData?.displayName?.charAt(0) || 'T'}
+                </AvatarFallback>
+                )}
+            </Avatar>
+            <p className="text-sm text-muted-foreground">
+                The photo on the left will be used as the reference for face verification.
+                You can upload a new one using the "Upload Photo" button above.
+            </p>
             </div>
         </CardContent>
       </Card>
@@ -227,6 +251,6 @@ export default function TeacherProfilePage() {
               </DialogFooter>
           </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

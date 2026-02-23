@@ -10,6 +10,7 @@ import {
   ArrowRight,
   MessageSquare,
   Ticket,
+  UserCheck,
 } from 'lucide-react';
 import {
   Card,
@@ -28,10 +29,16 @@ const dashboardItems = [
     icon: User,
   },
   {
-    title: 'Attendance',
+    title: 'Student Attendance',
     description: 'Create and manage attendance sessions.',
     href: '/dashboard/teacher/attendance',
     icon: BarChart3,
+  },
+  {
+    title: 'Mark My Attendance',
+    description: 'Mark your daily attendance using face verification.',
+    href: '/dashboard/teacher/mark-attendance',
+    icon: UserCheck,
   },
   {
     title: 'Lesson Plans',

@@ -16,6 +16,7 @@ import {
   Bell,
   Pencil,
   ShieldAlert,
+  UserCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,7 +31,8 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/dashboard/teacher', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/teacher/profile', icon: User, label: 'Profile' },
-  { href: '/dashboard/teacher/attendance', icon: BarChart3, label: 'Attendance' },
+  { href: '/dashboard/teacher/attendance', icon: BarChart3, label: 'Student Attendance' },
+  { href: '/dashboard/teacher/mark-attendance', icon: UserCheck, label: 'Mark My Attendance' },
   {
     label: 'Academics',
     icon: BookOpen,

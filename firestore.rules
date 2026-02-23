@@ -112,6 +112,11 @@ service cloud.firestore {
       allow create: if isOwner(userId) && request.resource.data.authenticationUid == userId;
       allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
+      
+      // Teacher self-attendance
+      match /teacherAttendance/{attendanceId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     /**
@@ -148,7 +153,7 @@ service cloud.firestore {
      */
     match /attendanceSessions/{sessionId} {
       allow get: if isSignedIn();
-      allow list: if isTeacher() ? request.auth.uid == resource.data.teacherId : isSignedIn();
+      allow list: if isTeacher();
       allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid;
       allow update: if isSessionOwner(sessionId);
       allow delete: if isSessionOwner(sessionId);
